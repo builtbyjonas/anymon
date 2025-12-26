@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "crates/anymon-core",
+    "crates/anymon-config",
+    "crates/anymon-runner",
+    "crates/anymon-shell",
+]
+resolver = "1"

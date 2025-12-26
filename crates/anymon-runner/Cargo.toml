@@ -1,0 +1,14 @@
+[package]
+name = "anymon-runner"
+version = "0.1.0"
+edition = "2021"
+description = "Runtime and task runner for anymon"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+notify = "8.2"
+globset = "0.4"
+anyhow = "1"
+colored = "3"
+anymon-config = { path = "../anymon-config" }

@@ -1,0 +1,9 @@
+[[task]]
+name = "example"
+watch = ["src/**/*.rs"]
+run = "echo 'Hello world from Anymon!'"
+restart = true
+
+[global]
+debounce = 50
+ignore = ["**/target/**"]
