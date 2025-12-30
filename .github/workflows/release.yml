@@ -59,7 +59,8 @@ jobs:
         run: |
           ARTIFACT_NAME="anymon-${{ matrix.target }}"
           mkdir $ARTIFACT_NAME
-          cp target/${{ matrix.target }}/release/anymon* $ARTIFACT_NAME/ || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ || true
+          cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
+          cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
           if [ "${{ matrix.archive }}" = "zip" ]; then
             7z a $ARTIFACT_NAME.zip $ARTIFACT_NAME/*
             echo "ARCHIVE=$ARTIFACT_NAME.zip" >> $GITHUB_ENV
