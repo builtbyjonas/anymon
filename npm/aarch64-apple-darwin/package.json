@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "anymon binary for aarch64-apple-darwin",
   "homepage": "https://anymon.xyz",
-  "bin": {
-    "anymon": "bin/anymon"
-  },
   "files": [
     "bin/anymon"
   ],

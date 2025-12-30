@@ -109,16 +109,30 @@ jobs:
         run: |
           node .github/scripts/update-npm-versions.js
 
-      - name: Publish npm packages
+      - name: Publish platform npm packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in npm/*/package.json; do
             pkgdir=$(dirname "$pkg")
+            base=$(basename "$pkgdir")
+            if [ "$base" = "anymon" ]; then
+              continue
+            fi
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              npm publish "$pkgdir" --access public || true
+              (cd "$pkgdir" && npm publish --access public) || true
             fi
           done
+
+      - name: Publish main npm package
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -f npm/anymon/package.json ]; then
+            cd npm/anymon
+            npm publish --access public || true
+          fi
 
       - name: Upload artifact to release
         uses: softprops/action-gh-release@v2
@@ -233,16 +247,30 @@ jobs:
         run: |
           node .github/scripts/update-npm-versions.js
 
-      - name: Publish npm packages
+      - name: Publish platform npm packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in npm/*/package.json; do
             pkgdir=$(dirname "$pkg")
+            base=$(basename "$pkgdir")
+            if [ "$base" = "anymon" ]; then
+              continue
+            fi
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              npm publish "$pkgdir" --access public --tag next || true
+              (cd "$pkgdir" && npm publish --access public --tag next) || true
             fi
           done
+
+      - name: Publish main npm package
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -f npm/anymon/package.json ]; then
+            cd npm/anymon
+            npm publish --access public --tag next || true
+          fi
 
       - name: Upload artifact to release
         uses: softprops/action-gh-release@v2
