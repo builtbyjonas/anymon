@@ -12,11 +12,12 @@ set -euo pipefail
 ios=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m)
 
-# Map arch to common names
+# Map arch to asset naming used by releases
 case "$arch" in
-    x86_64) arch="amd64" ;;
-    aarch64) arch="arm64" ;;
+    x86_64|amd64) arch="x86_64" ;;
+    aarch64|arm64) arch="aarch64" ;;
     armv7l) arch="armv7" ;;
+    i386|i686) arch="i386" ;;
     *) arch="$arch" ;;
 esac
 
@@ -31,6 +32,12 @@ else
 fi
 
 mkdir -p "$INSTALL_DIR"
+
+# Logging: keep a log so failures are preserved
+LOG="$INSTALL_DIR/install-log.txt"
+exec > >(tee -a "$LOG") 2>&1
+
+echo "Starting installer logging to $LOG"
 
 # Fetch latest release info
 release_json=$(curl -sL "$API_URL")
@@ -66,6 +73,31 @@ else
     mv -f "$outpath" "$INSTALL_DIR/anymon"
 fi
 
+# If extraction produced a single subdirectory, move its contents up so INSTALL_DIR directly contains executables
+children=("$(ls -A "$INSTALL_DIR" 2>/dev/null)")
+# Use a null-safe check: count entries excluding the log file
+shopt -s dotglob 2>/dev/null || true
+entries=("$INSTALL_DIR"/*)
+count=0
+for e in "${entries[@]}"; do
+    name=$(basename "$e")
+    if [ "$name" != "$(basename "$LOG")" ]; then
+        count=$((count+1))
+        only="$e"
+    fi
+done
+if [ "$count" -eq 1 ] && [ -d "$only" ]; then
+    echo "Flattening extracted directory $(basename "$only") into $INSTALL_DIR"
+    for item in "$only"/*; do
+        dest="$INSTALL_DIR/$(basename "$item")"
+        if [ -e "$dest" ]; then
+            rm -rf "$dest"
+        fi
+        mv "$item" "$dest"
+    done
+    rmdir "$only" || true
+fi
+
 echo "Installed anymon to $INSTALL_DIR."
 
 # Add the install directory to PATH if not already present
@@ -85,3 +117,6 @@ case ":$PATH:" in
         echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
         ;;
 esac
+
+        echo "Log file: $LOG"
+        read -r -p "Press Enter to close this installer and view messages..." _dummy
