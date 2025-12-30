@@ -2,3 +2,4 @@ target/
 dist/
 build/
 bin/anymon*
+node_modules/
