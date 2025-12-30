@@ -145,6 +145,11 @@ jobs:
               fi
             fi
 
+            # For Windows packages, ensure package.json lists the exe filename so npm includes it
+            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
+              node -e "let p=require('./'+process.argv[1]); p.files=['bin/anymon.exe']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
+            fi
+
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
               name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
               version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")
@@ -320,6 +325,11 @@ jobs:
               elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
                 cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
               fi
+            fi
+
+            # For Windows packages, ensure package.json lists the exe filename so npm includes it
+            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
+              node -e "let p=require('./'+process.argv[1]); p.files=['bin/anymon.exe']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
             fi
 
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
