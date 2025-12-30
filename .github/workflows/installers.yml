@@ -1,0 +1,51 @@
+name: Update Installers Branch
+
+on:
+  push:
+    branches:
+      - '**'
+
+env:
+  INSTALLERS_BRANCH: installers
+
+jobs:
+  update-installers:
+    runs-on: ubuntu-latest
+    environment: installers
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all branches
+        run: git fetch --all
+
+      - name: Create or switch to installers branch
+        run: |
+          if git show-ref --verify --quiet refs/heads/$INSTALLERS_BRANCH; then
+            git switch $INSTALLERS_BRANCH
+          else
+            git switch --orphan $INSTALLERS_BRANCH
+          fi
+
+      - name: Remove all files except .git
+        run: |
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+      - name: Copy www content
+        run: |
+          cp -r www/* .
+
+      - name: Add and commit changes
+        run: |
+          git add .
+          git commit -m "Update installers branch with www content" || echo "No changes to commit"
+
+      - name: Push to installers branch
+        run: |
+          git push origin $INSTALLERS_BRANCH --force
