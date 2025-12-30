@@ -120,15 +120,20 @@ jobs:
             if [ "$base" = "anymon" ]; then
               continue
             fi
+            # Ensure Windows packages use .exe for the binary name even if a no-ext file exists
+            dest_ext=""
+            case "${{ matrix.target }}" in
+              *-pc-windows-msvc)
+                dest_ext=".exe"
+                ;;
+            esac
+            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
+              mv "$pkgdir/bin/anymon" "$pkgdir/bin/anymon.exe" || true
+            fi
+
             # If the npm package is missing the binary, try to copy it from build outputs
             if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
               mkdir -p "$pkgdir/bin"
-              dest_ext=""
-              case "${{ matrix.target }}" in
-                *-pc-windows-msvc)
-                  dest_ext=".exe"
-                  ;;
-              esac
               if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
                 cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
               elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
@@ -292,15 +297,20 @@ jobs:
             if [ "$base" = "anymon" ]; then
               continue
             fi
+            # Ensure Windows packages use .exe for the binary name even if a no-ext file exists
+            dest_ext=""
+            case "${{ matrix.target }}" in
+              *-pc-windows-msvc)
+                dest_ext=".exe"
+                ;;
+            esac
+            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
+              mv "$pkgdir/bin/anymon" "$pkgdir/bin/anymon.exe" || true
+            fi
+
             # If the npm package is missing the binary, try to copy it from build outputs
             if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
               mkdir -p "$pkgdir/bin"
-              dest_ext=""
-              case "${{ matrix.target }}" in
-                *-pc-windows-msvc)
-                  dest_ext=".exe"
-                  ;;
-              esac
               if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
                 cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
               elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
