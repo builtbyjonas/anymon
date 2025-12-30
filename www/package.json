@@ -2,8 +2,8 @@
   "name": "anymon-www",
   "version": "0.0.0",
   "scripts": {
-    "start": "node api/index.js",
-    "dev": "nodemon api/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
   },
   "dependencies": {
     "express": "^5.2.1"
