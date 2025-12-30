@@ -67,11 +67,27 @@ jobs:
           case "${{ matrix.target }}" in
             x86_64-pc-windows-msvc)
               mkdir -p npm/x86_64-pc-windows-msvc/bin
-              cp target/${{ matrix.target }}/release/anymon.exe npm/x86_64-pc-windows-msvc/bin/anymon.exe
+              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
+                cp "target/${{ matrix.target }}/release/anymon.exe" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
+              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
+                cp "target/${{ matrix.target }}/release/anymon" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
+                cp "anymon-${{ matrix.target }}/anymon.exe" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
+                cp "anymon-${{ matrix.target }}/anymon" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
+              fi
               ;;
             aarch64-pc-windows-msvc)
               mkdir -p npm/aarch64-pc-windows-msvc/bin
-              cp target/${{ matrix.target }}/release/anymon.exe npm/aarch64-pc-windows-msvc/bin/anymon.exe
+              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
+                cp "target/${{ matrix.target }}/release/anymon.exe" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
+              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
+                cp "target/${{ matrix.target }}/release/anymon" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
+                cp "anymon-${{ matrix.target }}/anymon.exe" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
+                cp "anymon-${{ matrix.target }}/anymon" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
+              fi
               ;;
             x86_64-unknown-linux-gnu)
               mkdir -p npm/x86_64-unknown-linux-gnu/bin
@@ -127,13 +143,14 @@ jobs:
                 dest_ext=".exe"
                 ;;
             esac
+            # Ensure bin dir exists for package and try to copy any available binary directly
+            if [ ! -d "$pkgdir/bin" ]; then
+              mkdir -p "$pkgdir/bin"
+            fi
             if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
               mv "$pkgdir/bin/anymon" "$pkgdir/bin/anymon.exe" || true
             fi
-
-            # If the npm package is missing the binary, try to copy it from build outputs
             if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
-              mkdir -p "$pkgdir/bin"
               if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
                 cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
               elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
@@ -143,6 +160,11 @@ jobs:
               elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
                 cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
               fi
+            fi
+
+            # For Windows packages, ensure package.json includes the bin directory so npm includes the exe
+            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
+              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
             fi
 
             # For Windows packages, ensure package.json lists the exe filename so npm includes it
@@ -302,20 +324,20 @@ jobs:
             if [ "$base" = "anymon" ]; then
               continue
             fi
-            # Ensure Windows packages use .exe for the binary name even if a no-ext file exists
+            # Ensure bin dir exists for package and try to copy any available binary directly
             dest_ext=""
             case "${{ matrix.target }}" in
               *-pc-windows-msvc)
                 dest_ext=".exe"
                 ;;
             esac
+            if [ ! -d "$pkgdir/bin" ]; then
+              mkdir -p "$pkgdir/bin"
+            fi
             if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
               mv "$pkgdir/bin/anymon" "$pkgdir/bin/anymon.exe" || true
             fi
-
-            # If the npm package is missing the binary, try to copy it from build outputs
             if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
-              mkdir -p "$pkgdir/bin"
               if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
                 cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
               elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
@@ -325,6 +347,11 @@ jobs:
               elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
                 cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
               fi
+            fi
+
+            # For Windows packages, ensure package.json includes the bin directory so npm includes the exe
+            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
+              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
             fi
 
             # For Windows packages, ensure package.json lists the exe filename so npm includes it
