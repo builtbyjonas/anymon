@@ -76,6 +76,10 @@ jobs:
               elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
                 cp "anymon-${{ matrix.target }}/anymon" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
               fi
+              # Ensure package.json will include the bin folder when published
+              if [ -f "npm/x86_64-pc-windows-msvc/package.json" ]; then
+                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/x86_64-pc-windows-msvc/package.json" || true
+              fi
               ;;
             aarch64-pc-windows-msvc)
               mkdir -p npm/aarch64-pc-windows-msvc/bin
@@ -87,6 +91,9 @@ jobs:
                 cp "anymon-${{ matrix.target }}/anymon.exe" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
               elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
                 cp "anymon-${{ matrix.target }}/anymon" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
+              fi
+              if [ -f "npm/aarch64-pc-windows-msvc/package.json" ]; then
+                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/aarch64-pc-windows-msvc/package.json" || true
               fi
               ;;
             x86_64-unknown-linux-gnu)
