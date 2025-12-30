@@ -4,7 +4,7 @@
   "description": "anymon binary for x86_64-pc-windows-msvc",
   "homepage": "https://anymon.xyz",
   "files": [
-    "bin/anymon.exe"
+    "bin"
   ],
   "os": [
     "win32"
