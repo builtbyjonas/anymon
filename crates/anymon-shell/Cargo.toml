@@ -1,9 +1,9 @@
 [package]
 name = "anymon-shell"
+authors = ["Anymon Contributors"]
+description = "Lightweight crate to run commands directly without relying on external shells."
 version = "0.1.0"
 edition = "2021"
-authors = ["AnyMon Contributors"]
-description = "Lightweight crate to run commands directly without relying on external shells."
 license = "MIT OR Apache-2.0"
 
 [dependencies]

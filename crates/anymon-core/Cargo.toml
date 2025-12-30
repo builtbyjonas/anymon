@@ -1,8 +1,9 @@
 [package]
 name = "anymon-core"
+authors = ["Anymon Contributors"]
+description = "Ultra-fast, language-agnostic file watcher that runs anything on change."
 version = "0.1.0"
 edition = "2021"
-description = "Ultra-fast, language-agnostic file watcher that runs anything on change."
 license = "MIT OR Apache-2.0"
 
 [[bin]]

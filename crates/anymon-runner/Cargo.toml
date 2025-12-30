@@ -1,8 +1,9 @@
 [package]
 name = "anymon-runner"
+authors = ["Anymon Contributors"]
+description = "Runtime and task runner for anymon"
 version = "0.1.0"
 edition = "2021"
-description = "Runtime and task runner for anymon"
 license = "MIT OR Apache-2.0"
 
 [dependencies]

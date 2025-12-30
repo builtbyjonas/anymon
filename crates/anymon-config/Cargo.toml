@@ -1,8 +1,9 @@
 [package]
 name = "anymon-config"
+authors = ["Anymon Contributors"]
+description = "Config parsing for anymon"
 version = "0.1.0"
 edition = "2021"
-description = "Config parsing for anymon"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
