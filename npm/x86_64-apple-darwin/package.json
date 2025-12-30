@@ -1,6 +1,6 @@
 {
   "name": "@anymon/x86_64-apple-darwin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "anymon binary for x86_64-apple-darwin",
   "homepage": "https://anymon.xyz",
   "files": [

@@ -117,10 +117,4 @@ expected community behavior.
 
 ## License
 
-This repository includes a `LICENSE` file in the root. Refer to it for
-licensing terms.
-
-Questions or issues
-
-Open an issue in this repository describing the problem, and include steps to
-reproduce and relevant environment details.
+This repository is dual-licensed under the Apache-2.0 and MIT licenses. See `LICENSE-APACHE` and `LICENSE-MIT` for details.
