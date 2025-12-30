@@ -120,6 +120,20 @@ jobs:
             if [ "$base" = "anymon" ]; then
               continue
             fi
+            # If the npm package is missing the binary, try to copy it from build outputs
+            if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
+              mkdir -p "$pkgdir/bin"
+              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
+                cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon.exe" || true
+              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
+                cp "target/${{ matrix.target }}/release/anymon" "$pkgdir/bin/anymon" || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
+                cp "anymon-${{ matrix.target }}/anymon.exe" "$pkgdir/bin/anymon.exe" || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
+                cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon" || true
+              fi
+            fi
+
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
               name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
               version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")
@@ -272,6 +286,20 @@ jobs:
             if [ "$base" = "anymon" ]; then
               continue
             fi
+            # If the npm package is missing the binary, try to copy it from build outputs
+            if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
+              mkdir -p "$pkgdir/bin"
+              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
+                cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon.exe" || true
+              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
+                cp "target/${{ matrix.target }}/release/anymon" "$pkgdir/bin/anymon" || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
+                cp "anymon-${{ matrix.target }}/anymon.exe" "$pkgdir/bin/anymon.exe" || true
+              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
+                cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon" || true
+              fi
+            fi
+
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
               name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
               version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")

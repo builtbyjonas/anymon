@@ -228,7 +228,41 @@ fn update_anymon() -> Result<()> {
         .unwrap_or_else(|| std::path::Path::new("."))
         .to_path_buf();
 
-    let new_path = if cfg!(target_os = "windows") {
+    // Prefer standard per-user install directory if present (or create it):
+    // Windows: %LOCALAPPDATA%\anymon
+    // Linux: $XDG_DATA_HOME/anymon or $HOME/.local/share/anymon
+    // macOS: $HOME/Library/Application Support/anymon
+    let candidate_dir = if cfg!(target_os = "windows") {
+        std::env::var("LOCALAPPDATA")
+            .map(|v| std::path::PathBuf::from(v).join("anymon"))
+            .unwrap_or_else(|_| exe_dir.clone())
+    } else if cfg!(target_os = "linux") {
+        std::env::var("XDG_DATA_HOME")
+            .map(|v| std::path::PathBuf::from(v).join("anymon"))
+            .unwrap_or_else(|_| {
+                std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
+                    .join(".local/share/anymon")
+            })
+    } else if cfg!(target_os = "macos") {
+        std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
+            .join("Library/Application Support/anymon")
+    } else {
+        exe_dir.clone()
+    };
+
+    let candidate_path = if cfg!(target_os = "windows") {
+        candidate_dir.join("anymon.exe")
+    } else {
+        candidate_dir.join("anymon")
+    };
+
+    // Choose final path: prefer candidate if directory exists or can be created, otherwise fallback to exe dir
+    let new_path = if candidate_dir.exists()
+        || candidate_path.exists()
+        || std::fs::create_dir_all(&candidate_dir).is_ok()
+    {
+        candidate_path
+    } else if cfg!(target_os = "windows") {
         exe_dir.join("anymon.exe")
     } else {
         exe_dir.join("anymon")

@@ -13,6 +13,12 @@ switch ($arch) {
     default { $arch = $arch.ToLower() }
 }
 
+# Install directory: use %LOCALAPPDATA%/anymon if available, otherwise %APPDATA%/anymon
+$installDir = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA "anymon" } else { Join-Path $env:APPDATA "anymon" }
+if (-not (Test-Path $installDir)) {
+    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+}
+
 # Fetch latest release info
 try {
     $release = Invoke-RestMethod -Uri $apiUrl -UseBasicParsing
@@ -32,17 +38,37 @@ if (-not $asset) {
 
 $filename = $asset.name
 $url = $asset.browser_download_url
-Write-Host "Downloading $filename..."
-Invoke-WebRequest -Uri $url -OutFile $filename
+$downloadPath = Join-Path $installDir $filename
+Write-Host "Downloading $filename to $downloadPath..."
+Invoke-WebRequest -Uri $url -OutFile $downloadPath -UseBasicParsing
 
-Write-Host "Downloaded $filename."
-
-# Add the current directory to the user's PATH if not already present
-$currentDir = (Get-Location).Path
-$userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
-if ($userPath -notlike "*$currentDir*") {
-    [Environment]::SetEnvironmentVariable("PATH", "$userPath;$currentDir", "User")
-    Write-Host "Added $currentDir to your user PATH. You may need to restart your terminal or log out/in for changes to take effect."
+# If archive, extract; otherwise ensure executable is placed in install dir
+if ($downloadPath -like "*.zip") {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($downloadPath, $installDir)
+    Remove-Item $downloadPath -Force
+} elseif ($downloadPath -like "*.tar.gz" -or $downloadPath -like "*.tgz") {
+    # Use tar if available
+    if (Get-Command tar -ErrorAction SilentlyContinue) {
+        tar -xzf $downloadPath -C $installDir
+        Remove-Item $downloadPath -Force
+    } else {
+        Write-Host "Downloaded tar archive but 'tar' is not available to extract. Please extract $downloadPath manually to $installDir."
+    }
 } else {
-    Write-Host "$currentDir is already in your user PATH."
+    # raw binary: ensure it's named anymon.exe
+    $target = Join-Path $installDir (if ($os -eq "windows") { "anymon.exe" } else { "anymon" })
+    Move-Item -Path $downloadPath -Destination $target -Force
+}
+
+Write-Host "Installation completed to $installDir."
+
+# Add the install directory to the user's PATH if not already present
+$userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+if ($userPath -notlike "*$installDir*") {
+    $newPath = if ([string]::IsNullOrEmpty($userPath)) { $installDir } else { "$userPath;$installDir" }
+    [Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
+    Write-Host "Added $installDir to your user PATH. You may need to restart your terminal or log out/in for changes to take effect."
+} else {
+    Write-Host "$installDir is already in your user PATH."
 }
