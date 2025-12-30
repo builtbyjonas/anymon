@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build anymon-core",
+			"type": "shell",
+			"command": "cargo build --release -p anymon-core",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build anymon-config",
+			"type": "shell",
+			"command": "cargo build --release -p anymon-config",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build anymon-runner",
+			"type": "shell",
+			"command": "cargo build --release -p anymon-runner",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build anymon-shell",
+			"type": "shell",
+			"command": "cargo build --release -p anymon-shell",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build all anymon crates",
+			"type": "shell",
+			"command": "cargo build --release",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build"
+		}
+	]
+}

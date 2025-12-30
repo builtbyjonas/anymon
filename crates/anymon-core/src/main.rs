@@ -1,5 +1,9 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use reqwest::blocking as reqwest_blocking;
+use std::env;
+use std::fs;
+use std::io::Write;
 
 use anymon_config::Config as AnymonConfig;
 use anymon_runner::pref;
@@ -43,6 +47,8 @@ enum Commands {
     Watch,
     /// Debug mode (extra output)
     Debug,
+    /// Update anymon to the latest version
+    Update,
 }
 
 #[tokio::main]
@@ -72,7 +78,6 @@ async fn main() -> Result<()> {
     match &cli.command {
         Some(Commands::Run { command }) => {
             println!("{} run: {}", pref(), command);
-            // Run the command directly without invoking an external shell.
             let mut parts = command.split_whitespace();
             if let Some(prog) = parts.next() {
                 let args: Vec<&str> = parts.collect();
@@ -108,9 +113,141 @@ async fn main() -> Result<()> {
                 println!("{} no config loaded", pref());
             }
         }
+        Some(Commands::Update) => {
+            // Move blocking update logic to a sync function and call it in a blocking context
+            tokio::task::block_in_place(|| {
+                if let Err(e) = update_anymon() {
+                    eprintln!("{} update failed: {e}", pref());
+                }
+            });
+        }
         None => {
             println!("{} no command specified. See --help.", pref());
         }
     }
+    Ok(())
+}
+
+fn update_anymon() -> Result<()> {
+    println!("{} updating anymon to the latest version...", pref());
+    let os = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else if cfg!(target_os = "macos") {
+        "darwin"
+    } else {
+        eprintln!("{} unsupported OS for update", pref());
+        return Ok(());
+    };
+    let arch = if cfg!(target_arch = "x86_64") {
+        "amd64"
+    } else if cfg!(target_arch = "aarch64") {
+        "arm64"
+    } else if cfg!(target_arch = "arm") {
+        "armv7"
+    } else {
+        eprintln!("{} unsupported architecture for update", pref());
+        return Ok(());
+    };
+
+    let repo = "builtbyjonas/anymon";
+    let api_url = format!("https://api.github.com/repos/{}/releases", repo);
+    let client = reqwest_blocking::Client::new();
+    let releases: serde_json::Value = client
+        .get(&api_url)
+        .header("User-Agent", "anymon-updater")
+        .send()
+        .context("Failed to fetch releases info")?
+        .json()
+        .context("Failed to parse releases info")?;
+
+    let releases = releases.as_array().cloned().unwrap_or_default();
+    if releases.is_empty() {
+        println!(
+            "{} already on the latest version (no releases found)",
+            pref()
+        );
+        return Ok(());
+    }
+
+    let latest = &releases[0];
+    let latest_ver = latest["tag_name"].as_str().unwrap_or("");
+    let current_ver = env!("CARGO_PKG_VERSION");
+    if latest_ver.trim_start_matches('v') == current_ver {
+        println!(
+            "{} already on the latest version (v{})",
+            pref(),
+            current_ver
+        );
+        return Ok(());
+    }
+
+    let assets = latest["assets"].as_array().cloned().unwrap_or_default();
+    let mut asset_url = None;
+    let mut asset_name = None;
+    for asset in &assets {
+        let url = asset["browser_download_url"].as_str().unwrap_or("");
+        let name = asset["name"].as_str().unwrap_or("");
+        if url.contains(os) && url.contains(arch) {
+            asset_url = Some(url.to_string());
+            asset_name = Some(name.to_string());
+            break;
+        }
+    }
+    if asset_url.is_none() {
+        eprintln!(
+            "{} no prebuilt binary found for {}/{} in release {}",
+            pref(),
+            os,
+            arch,
+            latest_ver
+        );
+        return Ok(());
+    }
+    let asset_url = asset_url.unwrap();
+    let asset_name = asset_name.unwrap();
+    println!(
+        "{} downloading {} (version {})...",
+        pref(),
+        asset_name,
+        latest_ver
+    );
+    let mut resp = client
+        .get(&asset_url)
+        .header("User-Agent", "anymon-updater")
+        .send()
+        .context("Failed to download asset")?;
+    let mut buf: Vec<u8> = vec![];
+    resp.copy_to(&mut buf)
+        .context("Failed to read asset data")?;
+
+    let current_exe = env::current_exe().context("Failed to get current executable path")?;
+    let exe_dir = current_exe
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .to_path_buf();
+
+    let new_path = if cfg!(target_os = "windows") {
+        exe_dir.join("anymon.exe")
+    } else {
+        exe_dir.join("anymon")
+    };
+
+    let tmp_path = new_path.with_extension("tmp");
+    let mut file =
+        fs::File::create(&tmp_path).context("Failed to create temp file for new binary")?;
+    file.write_all(&buf).context("Failed to write new binary")?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = file.metadata()?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&tmp_path, perms)?;
+    }
+    file.sync_all()?;
+
+    fs::rename(&tmp_path, &new_path).context("Failed to replace binary")?;
+    println!("{} updated {} successfully!", pref(), new_path.display());
     Ok(())
 }
