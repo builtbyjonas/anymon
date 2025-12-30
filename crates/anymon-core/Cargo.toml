@@ -20,6 +20,6 @@ colored = "3"
 anymon-config = { path = "../anymon-config" }
 anymon-runner = { path = "../anymon-runner" }
 anymon-shell = { path = "../anymon-shell" }
-reqwest = { version = "0.12", features = ["blocking", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls"] }
 zip = "7"
 serde_json = "1"
