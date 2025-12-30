@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const serverless = require('serverless-http');
 
 const app = express();
 
@@ -22,14 +21,13 @@ function getRawBase() {
 
 const RAW_BASE = getRawBase();
 
-app.get('/', (req, res) => res.redirect(REPO_URL));
+app.get('/', (_req, res) => res.redirect(REPO_URL));
 
 async function fetchAndSend(res, filename) {
   const filePath = `installers/${filename}`;
   const url = `${RAW_BASE}/${filePath}`;
   try {
     const resp = await fetch(url);
-    console.log(`Fetching ${url} - ${resp.status}`);
     if (!resp.ok) return res.status(404).type('text/plain').send('Not found');
     const text = await resp.text();
     res.type('text/plain').send(text);
@@ -38,8 +36,8 @@ async function fetchAndSend(res, filename) {
   }
 }
 
-app.get('/install.ps1', (req, res) => fetchAndSend(res, 'install.ps1'));
-app.get('/install.sh', (req, res) => fetchAndSend(res, 'install.sh'));
+app.get('/install.ps1', (_req, res) => fetchAndSend(res, 'install.ps1'));
+app.get('/install.sh', (_req, res) => fetchAndSend(res, 'install.sh'));
 
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -48,4 +46,4 @@ if (require.main === module) {
   app.listen(port, () => console.log(`anymon-www listening on http://localhost:${port}`));
 }
 
-module.exports = serverless(app);
+module.exports = app;
