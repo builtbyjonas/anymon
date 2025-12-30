@@ -1,6 +1,6 @@
 {
   "name": "anymon",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ultra-fast, language-agnostic file watcher that runs anything on change.",
   "bin": {
     "anymon": "bin/anymon.js"
@@ -22,12 +22,12 @@
     "Anymon Contributors"
   ],
   "optionalDependencies": {
-    "@anymon/x86_64-unknown-linux-gnu": "0.1.0",
-    "@anymon/aarch64-unknown-linux-gnu": "0.1.0",
-    "@anymon/x86_64-apple-darwin": "0.1.0",
-    "@anymon/aarch64-apple-darwin": "0.1.0",
-    "@anymon/x86_64-pc-windows-msvc": "0.1.0",
-    "@anymon/aarch64-pc-windows-msvc": "0.1.0"
+    "@anymon/x86_64-unknown-linux-gnu": "0.2.0",
+    "@anymon/aarch64-unknown-linux-gnu": "0.2.0",
+    "@anymon/x86_64-apple-darwin": "0.2.0",
+    "@anymon/aarch64-apple-darwin": "0.2.0",
+    "@anymon/x86_64-pc-windows-msvc": "0.2.0",
+    "@anymon/aarch64-pc-windows-msvc": "0.2.0"
   },
   "license": "MIT or Apache-2.0"
 }
