@@ -70,12 +70,12 @@ You can install Anymon several ways:
 cargo build --release --workspace
 ```
 
-Configuration
+## Configuration
 
 Configuration is a TOML file (e.g., `Anymon.toml`). The supported schema is
 documented in `docs/usage.md` and implemented in `crates/anymon-core/src/config.rs`.
 
-Generating API docs
+### Generating API docs
 
 To generate Rust API documentation for the workspace:
 
@@ -83,12 +83,12 @@ To generate Rust API documentation for the workspace:
 cargo doc --workspace --open
 ```
 
-Contributing
+## Contributing
 
 See `CONTRIBUTING.md` for contribution guidelines and `CODE_OF_CONDUCT.md` for
 expected community behavior.
 
-License
+## License
 
 This repository includes a `LICENSE` file in the root. Refer to it for
 licensing terms.

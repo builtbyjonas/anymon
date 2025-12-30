@@ -9,7 +9,7 @@ separation of concerns below:
 - Examples: `example_project` — example configuration and usage patterns for
   typical workflows.
 
-Runtime behavior
+## Runtime behavior
 
 1. The binary loads a TOML configuration (if provided) using the structures in
    `src/config.rs`.
@@ -19,7 +19,7 @@ Runtime behavior
    signaled to (re)start their configured command.
 5. Tasks can be controlled interactively via stdin (status, restart, quit).
 
-Design goals
+## Design goals
 
 - Minimal configuration (TOML), predictable semantics, and simple control
   primitives.

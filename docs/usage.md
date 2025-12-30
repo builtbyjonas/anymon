@@ -2,7 +2,7 @@
 
 This document describes configuration and runtime usage for `anymon`.
 
-CLI
+## CLI
 
 The binary exposes these commands and flags (from `crates/anymon-core/src/main.rs`):
 
@@ -12,7 +12,7 @@ The binary exposes these commands and flags (from `crates/anymon-core/src/main.r
   `--config Anymon.toml`.
 - `anymon debug` — Print debug information (loaded config, etc.).
 
-Global flags
+## Global flags
 
 - `--watch <PATH>` — Override config watch roots.
 - `--config <FILE>` — Path to the TOML configuration file.
@@ -20,7 +20,7 @@ Global flags
 - `--kill-timeout <MS>` — Kill timeout for processes in ms (default 2000).
 - `--once` — Run once and exit (global).
 
-Interactive control
+## Interactive control
 
 When `watch` is running you can type commands on stdin (followed by Enter):
 
@@ -28,7 +28,7 @@ When `watch` is running you can type commands on stdin (followed by Enter):
 - `status` — print running/stopped status.
 - `quit`, `q`, `exit` — request shutdown.
 
-Configuration (Anymon.toml)
+## Configuration (Anymon.toml)
 
 The TOML configuration structure is implemented in `src/config.rs`. Example
 schema:
@@ -51,7 +51,7 @@ run = "cargo test"
 restart = false
 ```
 
-Field descriptions
+## Field descriptions
 
 - `[global]` section
   - `debounce` (ms): optional debounce window applied to events.
@@ -63,7 +63,7 @@ Field descriptions
   - `restart` (bool, optional): whether to kill & restart on subsequent
     events (defaults to true).
 
-Globs and roots
+## Globs and roots
 
 Patterns in `watch` and `ignore` are interpreted as globs. The watcher resolves
 patterns against the configured root(s):
@@ -73,7 +73,7 @@ patterns against the configured root(s):
   directory is used as the root.
 - Otherwise the current working directory is used.
 
-Examples
+## Examples
 
 Run a single command:
 

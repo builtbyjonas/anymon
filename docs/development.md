@@ -3,29 +3,29 @@
 This document explains how to build, test, and contribute to the Anymon
 project.
 
-Building
+## Building
 
-Build the workspace:
+### Build the workspace
 
 ```bash
 cargo build
 ```
 
-Or build in release mode:
+### Or build in release mode
 
 ```bash
 cargo build --release
 ```
 
-Running tests
+## Running tests
 
-Run the workspace tests:
+### Run the workspace tests
 
 ```bash
 cargo test --workspace
 ```
 
-Formatting and linting
+## Formatting and linting
 
 Format the code with `rustfmt` (provided by `rustup component add rustfmt`):
 
@@ -33,14 +33,14 @@ Format the code with `rustfmt` (provided by `rustup component add rustfmt`):
 cargo fmt --all
 ```
 
-Run clippy for lint checks:
+## Run clippy for lint checks:
 
 ```bash
-rustrup component add clippy
+rustup component add clippy
 cargo clippy --all -- -D warnings
 ```
 
-Debugging and logging
+## Debugging and logging
 
 Use `cargo run` with the `debug` command to print loaded configuration and
 additional runtime info:
@@ -50,7 +50,7 @@ cd crates/anymon-core
 cargo run -- debug --config ../example_project/Anymon.toml
 ```
 
-Docs generation
+## Docs generation
 
 Generate API docs and open them in the browser:
 
@@ -58,7 +58,7 @@ Generate API docs and open them in the browser:
 cargo doc --workspace --open
 ```
 
-Testing changes locally
+## Testing changes locally
 
 Use `example_project` to verify typical workflows quickly:
 
@@ -67,7 +67,7 @@ cd example_project
 cargo run -- --config Anymon.toml watch
 ```
 
-Submitting changes
+## Submitting changes
 
 1. Fork and clone the repository.
 2. Create a feature branch: `git checkout -b feat/my-change`.

@@ -2,13 +2,13 @@
 
 The authoritative API is generated from the Rust crate using `cargo doc`.
 
-Generate docs locally:
+## Generate docs locally:
 
 ```bash
 cargo doc --workspace --open
 ```
 
-Key public types
+## Key public types
 
 - `crates::anymon_core::config::Config` — top-level config with
   `global` and `task` sections.
