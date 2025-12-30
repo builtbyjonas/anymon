@@ -63,24 +63,30 @@ jobs:
           mkdir $ARTIFACT_NAME
           cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
           cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
-          # Copy to npm bin folders
+          # Ensure npm bin directories exist and copy binaries
           case "${{ matrix.target }}" in
             x86_64-pc-windows-msvc)
+              mkdir -p npm/x86_64-pc-windows-msvc/bin
               cp target/${{ matrix.target }}/release/anymon.exe npm/x86_64-pc-windows-msvc/bin/anymon.exe
               ;;
             aarch64-pc-windows-msvc)
+              mkdir -p npm/aarch64-pc-windows-msvc/bin
               cp target/${{ matrix.target }}/release/anymon.exe npm/aarch64-pc-windows-msvc/bin/anymon.exe
               ;;
             x86_64-unknown-linux-gnu)
+              mkdir -p npm/x86_64-unknown-linux-gnu/bin
               cp target/${{ matrix.target }}/release/anymon npm/x86_64-unknown-linux-gnu/bin/anymon
               ;;
             aarch64-unknown-linux-gnu)
+              mkdir -p npm/aarch64-unknown-linux-gnu/bin
               cp target/${{ matrix.target }}/release/anymon npm/aarch64-unknown-linux-gnu/bin/anymon
               ;;
             x86_64-apple-darwin)
+              mkdir -p npm/x86_64-apple-darwin/bin
               cp target/${{ matrix.target }}/release/anymon npm/x86_64-apple-darwin/bin/anymon
               ;;
             aarch64-apple-darwin)
+              mkdir -p npm/aarch64-apple-darwin/bin
               cp target/${{ matrix.target }}/release/anymon npm/aarch64-apple-darwin/bin/anymon
               ;;
           esac
@@ -181,24 +187,30 @@ jobs:
           mkdir $ARTIFACT_NAME
           cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
           cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
-          # Copy to npm bin folders
+          # Ensure npm bin directories exist and copy binaries
           case "${{ matrix.target }}" in
             x86_64-pc-windows-msvc)
+              mkdir -p npm/x86_64-pc-windows-msvc/bin
               cp target/${{ matrix.target }}/release/anymon.exe npm/x86_64-pc-windows-msvc/bin/anymon.exe
               ;;
             aarch64-pc-windows-msvc)
+              mkdir -p npm/aarch64-pc-windows-msvc/bin
               cp target/${{ matrix.target }}/release/anymon.exe npm/aarch64-pc-windows-msvc/bin/anymon.exe
               ;;
             x86_64-unknown-linux-gnu)
+              mkdir -p npm/x86_64-unknown-linux-gnu/bin
               cp target/${{ matrix.target }}/release/anymon npm/x86_64-unknown-linux-gnu/bin/anymon
               ;;
             aarch64-unknown-linux-gnu)
+              mkdir -p npm/aarch64-unknown-linux-gnu/bin
               cp target/${{ matrix.target }}/release/anymon npm/aarch64-unknown-linux-gnu/bin/anymon
               ;;
             x86_64-apple-darwin)
+              mkdir -p npm/x86_64-apple-darwin/bin
               cp target/${{ matrix.target }}/release/anymon npm/x86_64-apple-darwin/bin/anymon
               ;;
             aarch64-apple-darwin)
+              mkdir -p npm/aarch64-apple-darwin/bin
               cp target/${{ matrix.target }}/release/anymon npm/aarch64-apple-darwin/bin/anymon
               ;;
           esac
