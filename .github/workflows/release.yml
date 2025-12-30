@@ -121,8 +121,8 @@ jobs:
               continue
             fi
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              name=$(node -e "console.log(require(process.argv[1]).name)" "$pkgdir/package.json")
-              version=$(node -e "console.log(require(process.argv[1]).version)" "$pkgdir/package.json")
+              name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
+              version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")
               if npm view "$name@$version" >/dev/null 2>&1; then
                 echo "Skipping $name@$version (already published)"
               else
@@ -138,8 +138,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -f npm/anymon/package.json ]; then
-            name=$(node -e "console.log(require(process.argv[1]).name)" npm/anymon/package.json)
-            version=$(node -e "console.log(require(process.argv[1]).version)" npm/anymon/package.json)
+            name=$(node -e "console.log(require('./'+process.argv[1]).name)" npm/anymon/package.json)
+            version=$(node -e "console.log(require('./'+process.argv[1]).version)" npm/anymon/package.json)
             if npm view "$name@$version" >/dev/null 2>&1; then
               echo "Skipping $name@$version (already published)"
             else
@@ -273,8 +273,8 @@ jobs:
               continue
             fi
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              name=$(node -e "console.log(require(process.argv[1]).name)" "$pkgdir/package.json")
-              version=$(node -e "console.log(require(process.argv[1]).version)" "$pkgdir/package.json")
+              name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
+              version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")
               if npm view "$name@$version" >/dev/null 2>&1; then
                 echo "Skipping $name@$version (already published)"
               else
@@ -290,8 +290,8 @@ jobs:
         shell: bash
         run: |
           if [ -f npm/anymon/package.json ]; then
-            name=$(node -e "console.log(require(process.argv[1]).name)" npm/anymon/package.json)
-            version=$(node -e "console.log(require(process.argv[1]).version)" npm/anymon/package.json)
+            name=$(node -e "console.log(require('./'+process.argv[1]).name)" npm/anymon/package.json)
+            version=$(node -e "console.log(require('./'+process.argv[1]).version)" npm/anymon/package.json)
             if npm view "$name@$version" >/dev/null 2>&1; then
               echo "Skipping $name@$version (already published)"
             else
