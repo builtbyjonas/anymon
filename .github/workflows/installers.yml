@@ -17,6 +17,12 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Move www to temp location
+        run: |
+          if [ -d www ]; then
+            mv www /tmp/www_copy
+          fi
+
       - name: Set up Git user
         run: |
           git config --global user.name "github-actions[bot]"
@@ -37,9 +43,12 @@ jobs:
         run: |
           find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 
-      - name: Copy www content
+
+      - name: Restore www content
         run: |
-          cp -r www/* .
+          if [ -d /tmp/www_copy ]; then
+            cp -r /tmp/www_copy/* .
+          fi
 
       - name: Add and commit changes
         run: |
