@@ -110,6 +110,7 @@ jobs:
           node .github/scripts/update-npm-versions.js
 
       - name: Publish platform npm packages
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -120,18 +121,31 @@ jobs:
               continue
             fi
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              (cd "$pkgdir" && npm publish --access public) || true
+              name=$(node -e "console.log(require(process.argv[1]).name)" "$pkgdir/package.json")
+              version=$(node -e "console.log(require(process.argv[1]).version)" "$pkgdir/package.json")
+              if npm view "$name@$version" >/dev/null 2>&1; then
+                echo "Skipping $name@$version (already published)"
+              else
+                (cd "$pkgdir" && npm publish --access public) || true
+              fi
             fi
           done
 
       - name: Publish main npm package
         if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -f npm/anymon/package.json ]; then
-            cd npm/anymon
-            npm publish --access public || true
+            name=$(node -e "console.log(require(process.argv[1]).name)" npm/anymon/package.json)
+            version=$(node -e "console.log(require(process.argv[1]).version)" npm/anymon/package.json)
+            if npm view "$name@$version" >/dev/null 2>&1; then
+              echo "Skipping $name@$version (already published)"
+            else
+              cd npm/anymon
+              npm publish --access public || true
+            fi
           fi
 
       - name: Upload artifact to release
@@ -248,6 +262,7 @@ jobs:
           node .github/scripts/update-npm-versions.js
 
       - name: Publish platform npm packages
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -258,7 +273,13 @@ jobs:
               continue
             fi
             if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              (cd "$pkgdir" && npm publish --access public --tag next) || true
+              name=$(node -e "console.log(require(process.argv[1]).name)" "$pkgdir/package.json")
+              version=$(node -e "console.log(require(process.argv[1]).version)" "$pkgdir/package.json")
+              if npm view "$name@$version" >/dev/null 2>&1; then
+                echo "Skipping $name@$version (already published)"
+              else
+                (cd "$pkgdir" && npm publish --access public --tag next) || true
+              fi
             fi
           done
 
@@ -266,10 +287,17 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
         run: |
           if [ -f npm/anymon/package.json ]; then
-            cd npm/anymon
-            npm publish --access public --tag next || true
+            name=$(node -e "console.log(require(process.argv[1]).name)" npm/anymon/package.json)
+            version=$(node -e "console.log(require(process.argv[1]).version)" npm/anymon/package.json)
+            if npm view "$name@$version" >/dev/null 2>&1; then
+              echo "Skipping $name@$version (already published)"
+            else
+              cd npm/anymon
+              npm publish --access public --tag next || true
+            fi
           fi
 
       - name: Upload artifact to release
