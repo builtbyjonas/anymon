@@ -5,6 +5,9 @@ on:
     branches:
       - '**'
 
+permissions:
+  contents: write
+
 env:
   INSTALLERS_BRANCH: installers
 
