@@ -144,7 +144,7 @@ packages:
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
-    engines: {node: ^8.16.0 || ^10.7.0 || >=11.0.0}
+    engines: {node: ^8.16.0 || ^10.7.1 || >=11.0.0}
     os: [darwin]
 
   function-bind@1.1.2:
