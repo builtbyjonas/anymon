@@ -40,13 +40,39 @@ jobs:
         run: |
           rustup target add ${{ matrix.target }} || true
 
+      - name: Install cross toolchain (aarch64 only)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up cargo config for cross-compiling (aarch64 only)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
+
       - name: Build (release)
         run: |
           cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload build artifacts
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          ARTIFACT_NAME="anymon-${{ matrix.target }}"
+          mkdir $ARTIFACT_NAME
+          cp target/${{ matrix.target }}/release/anymon* $ARTIFACT_NAME/ || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ || true
+          if [[ "${{ matrix.os }}" == windows* ]]; then
+            7z a $ARTIFACT_NAME.zip $ARTIFACT_NAME/*
+            echo "ARCHIVE=$ARTIFACT_NAME.zip" >> $GITHUB_ENV
+          else
+            tar -czvf $ARTIFACT_NAME.tar.gz $ARTIFACT_NAME/*
+            echo "ARCHIVE=$ARTIFACT_NAME.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Upload packaged artifact
         uses: actions/upload-artifact@v4
         with:
           name: anymon-${{ matrix.target }}-${{ matrix.os }}
-          path: |
-            target/${{ matrix.target }}/release/
+          path: ${{ env.ARCHIVE }}
+        env:
+          ARCHIVE: ${{ env.ARCHIVE }}
