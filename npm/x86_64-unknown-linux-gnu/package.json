@@ -1,6 +1,6 @@
 {
   "name": "@anymon/x86_64-unknown-linux-gnu",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "anymon binary for x86_64-unknown-linux-gnu",
   "homepage": "https://anymon.xyz",
   "files": [
