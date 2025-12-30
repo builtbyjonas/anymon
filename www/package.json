@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "start": "node api/index.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon api/index.js"
   },
   "dependencies": {
     "express": "^5.2.1"
