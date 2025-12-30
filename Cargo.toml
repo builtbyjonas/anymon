@@ -9,6 +9,6 @@ resolver = "1"
 
 [workspace.package]
 authors = ["Anymon Contributors"]
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"

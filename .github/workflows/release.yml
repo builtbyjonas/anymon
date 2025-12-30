@@ -78,7 +78,7 @@ jobs:
               fi
               # Ensure package.json will include the bin folder when published
               if [ -f "npm/x86_64-pc-windows-msvc/package.json" ]; then
-                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/x86_64-pc-windows-msvc/package.json" || true
+                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/x86_64-pc-windows-msvc/package.json" || true
               fi
               ;;
             aarch64-pc-windows-msvc)
@@ -93,7 +93,7 @@ jobs:
                 cp "anymon-${{ matrix.target }}/anymon" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
               fi
               if [ -f "npm/aarch64-pc-windows-msvc/package.json" ]; then
-                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/aarch64-pc-windows-msvc/package.json" || true
+                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/aarch64-pc-windows-msvc/package.json" || true
               fi
               ;;
             x86_64-unknown-linux-gnu)
@@ -171,7 +171,7 @@ jobs:
 
             # For Windows packages, ensure package.json includes the bin directory so npm includes the exe
             if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
-              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
+              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
             fi
 
             # Debug: show what's in the package bin and package.json before publishing
@@ -359,7 +359,7 @@ jobs:
 
             # For Windows packages, ensure package.json includes the bin directory so npm includes the exe
             if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
-              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
+              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
             fi
 
             # Debug: show what's in the package bin and package.json before publishing

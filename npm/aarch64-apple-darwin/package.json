@@ -1,6 +1,6 @@
 {
   "name": "@anymon/aarch64-apple-darwin",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "anymon binary for aarch64-apple-darwin",
   "homepage": "https://anymon.xyz",
   "files": [
