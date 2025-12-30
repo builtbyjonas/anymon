@@ -1,0 +1,19 @@
+{
+  "name": "@anymon/x86_64-pc-windows-msvc",
+  "version": "0.1.0",
+  "description": "anymon binary for x86_64-pc-windows-msvc",
+  "homepage": "https://anymon.xyz",
+  "bin": {
+    "anymon": "bin/anymon.exe"
+  },
+  "files": [
+    "bin/anymon"
+  ],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "license": "MIT or Apache-2.0"
+}

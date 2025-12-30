@@ -63,6 +63,28 @@ jobs:
           mkdir $ARTIFACT_NAME
           cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
           cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
+          # Copy to npm bin folders
+          case "${{ matrix.target }}" in
+            x86_64-pc-windows-msvc)
+              cp target/${{ matrix.target }}/release/anymon.exe npm/x86_64-pc-windows-msvc/bin/anymon.exe
+              ;;
+            aarch64-pc-windows-msvc)
+              cp target/${{ matrix.target }}/release/anymon.exe npm/aarch64-pc-windows-msvc/bin/anymon.exe
+              ;;
+            x86_64-unknown-linux-gnu)
+              cp target/${{ matrix.target }}/release/anymon npm/x86_64-unknown-linux-gnu/bin/anymon
+              ;;
+            aarch64-unknown-linux-gnu)
+              cp target/${{ matrix.target }}/release/anymon npm/aarch64-unknown-linux-gnu/bin/anymon
+              ;;
+            x86_64-apple-darwin)
+              cp target/${{ matrix.target }}/release/anymon npm/x86_64-apple-darwin/bin/anymon
+              ;;
+            aarch64-apple-darwin)
+              cp target/${{ matrix.target }}/release/anymon npm/aarch64-apple-darwin/bin/anymon
+              ;;
+          esac
+          # Archive for release
           if [ "${{ matrix.archive }}" = "zip" ]; then
             7z a $ARTIFACT_NAME.zip $ARTIFACT_NAME/*
             echo "ARCHIVE=$ARTIFACT_NAME.zip" >> $GITHUB_ENV
@@ -70,6 +92,27 @@ jobs:
             tar -czvf $ARTIFACT_NAME.tar.gz $ARTIFACT_NAME/*
             echo "ARCHIVE=$ARTIFACT_NAME.tar.gz" >> $GITHUB_ENV
           fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Update npm package versions
+        run: |
+          node .github/scripts/update-npm-versions.js
+
+      - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in npm/*/package.json; do
+            pkgdir=$(dirname "$pkg")
+            if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
+              npm publish "$pkgdir" --access public || true
+            fi
+          done
 
       - name: Upload artifact to release
         uses: softprops/action-gh-release@v2
@@ -138,6 +181,28 @@ jobs:
           mkdir $ARTIFACT_NAME
           cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
           cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
+          # Copy to npm bin folders
+          case "${{ matrix.target }}" in
+            x86_64-pc-windows-msvc)
+              cp target/${{ matrix.target }}/release/anymon.exe npm/x86_64-pc-windows-msvc/bin/anymon.exe
+              ;;
+            aarch64-pc-windows-msvc)
+              cp target/${{ matrix.target }}/release/anymon.exe npm/aarch64-pc-windows-msvc/bin/anymon.exe
+              ;;
+            x86_64-unknown-linux-gnu)
+              cp target/${{ matrix.target }}/release/anymon npm/x86_64-unknown-linux-gnu/bin/anymon
+              ;;
+            aarch64-unknown-linux-gnu)
+              cp target/${{ matrix.target }}/release/anymon npm/aarch64-unknown-linux-gnu/bin/anymon
+              ;;
+            x86_64-apple-darwin)
+              cp target/${{ matrix.target }}/release/anymon npm/x86_64-apple-darwin/bin/anymon
+              ;;
+            aarch64-apple-darwin)
+              cp target/${{ matrix.target }}/release/anymon npm/aarch64-apple-darwin/bin/anymon
+              ;;
+          esac
+          # Archive for release
           if [ "${{ matrix.archive }}" = "zip" ]; then
             7z a $ARTIFACT_NAME.zip $ARTIFACT_NAME/*
             echo "ARCHIVE=$ARTIFACT_NAME.zip" >> $GITHUB_ENV
@@ -145,6 +210,27 @@ jobs:
             tar -czvf $ARTIFACT_NAME.tar.gz $ARTIFACT_NAME/*
             echo "ARCHIVE=$ARTIFACT_NAME.tar.gz" >> $GITHUB_ENV
           fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Update npm package versions
+        run: |
+          node .github/scripts/update-npm-versions.js
+
+      - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in npm/*/package.json; do
+            pkgdir=$(dirname "$pkg")
+            if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
+              npm publish "$pkgdir" --access public --tag next || true
+            fi
+          done
 
       - name: Upload artifact to release
         uses: softprops/action-gh-release@v2
