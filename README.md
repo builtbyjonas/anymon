@@ -70,6 +70,33 @@ You can install Anymon several ways:
 cargo build --release --workspace
 ```
 
+## Updating
+
+To update Anymon to the latest version, use the built-in update command:
+
+```bash
+anymon update
+```
+
+This will check for the latest release and update your Anymon binary if a newer version is available.
+
+- On Windows, run this in PowerShell or Command Prompt.
+- On Unix/macOS, run it in your terminal.
+
+If you installed Anymon via npm, you **should** update using your package manager:
+
+```bash
+npm i -g anymon@latest
+# or
+yarn global add anymon@latest
+# or
+pnpm add -g anymon@latest
+# or
+bun add -g anymon@latest
+```
+
+For more details, see `docs/updating.md`.
+
 ## Configuration
 
 Configuration is a TOML file (e.g., `Anymon.toml`). The supported schema is
