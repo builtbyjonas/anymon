@@ -44,7 +44,7 @@ jobs:
       environment: ${{ steps.meta.outputs.environment }}
       dist-tag: ${{ steps.meta.outputs.dist-tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
@@ -104,7 +104,7 @@ jobs:
           - { os: windows-latest, target: aarch64-pc-windows-msvc }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
@@ -188,7 +188,7 @@ jobs:
       # short-lived publish credential and signs provenance with it.
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
