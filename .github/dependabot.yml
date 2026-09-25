@@ -16,3 +16,14 @@ updates:
       - "builtbyjonas"
     assignees:
       - "builtbyjonas"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"

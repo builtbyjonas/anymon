@@ -1,406 +1,171 @@
-name: Release Build
+name: Release
+
+# Builds and publishes a release when a GitHub release is created. The tag
+# must match the version in Cargo.toml (e.g. v1.0.0). Pre-releases are
+# published to npm under the `next` tag, releases under `latest`.
 
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and publish (e.g. v1.0.0)
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
-  build-stable:
-    name: Build and Upload Artifacts (Stable)
-    if: ${{ !github.event.release.prerelease }}
-    environment: stable
-    runs-on: ${{ matrix.os }}
+  version:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Compare the tag with Cargo.toml
+        run: |
+          version=$(node .github/scripts/update-npm-versions.js --print)
+          echo "Cargo.toml version: $version, tag: $TAG"
+          if [ "v$version" != "$TAG" ] && [ "$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match the Cargo.toml version $version"
+            exit 1
+          fi
+
+      - name: Release metadata
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "prerelease=${{ github.event.release.prerelease }}" >> "$GITHUB_OUTPUT"
+          else
+            case "$TAG" in
+              *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+              *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: version
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            archive: tar.gz
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            archive: tar.gz
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            archive: tar.gz
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            archive: tar.gz
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            archive: zip
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            archive: zip
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-
-      - name: Install cross toolchain (aarch64 only)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-
-      - name: Set up cargo config for cross-compiling (aarch64 only)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          mkdir -p .cargo
-          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
-          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
-
-      - name: Build release
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Prepare artifact
-        shell: bash
-        run: |
-          ARTIFACT_NAME="anymon-${{ matrix.target }}"
-          mkdir $ARTIFACT_NAME
-          cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
-          cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
-          # Ensure npm bin directories exist and copy binaries
-          case "${{ matrix.target }}" in
-            x86_64-pc-windows-msvc)
-              mkdir -p npm/x86_64-pc-windows-msvc/bin
-              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
-                cp "target/${{ matrix.target }}/release/anymon.exe" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
-              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
-                cp "target/${{ matrix.target }}/release/anymon" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
-                cp "anymon-${{ matrix.target }}/anymon.exe" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
-                cp "anymon-${{ matrix.target }}/anymon" npm/x86_64-pc-windows-msvc/bin/anymon.exe || true
-              fi
-              # Ensure package.json will include the bin folder when published
-              if [ -f "npm/x86_64-pc-windows-msvc/package.json" ]; then
-                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/x86_64-pc-windows-msvc/package.json" || true
-              fi
-              ;;
-            aarch64-pc-windows-msvc)
-              mkdir -p npm/aarch64-pc-windows-msvc/bin
-              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
-                cp "target/${{ matrix.target }}/release/anymon.exe" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
-              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
-                cp "target/${{ matrix.target }}/release/anymon" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
-                cp "anymon-${{ matrix.target }}/anymon.exe" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
-                cp "anymon-${{ matrix.target }}/anymon" npm/aarch64-pc-windows-msvc/bin/anymon.exe || true
-              fi
-              if [ -f "npm/aarch64-pc-windows-msvc/package.json" ]; then
-                node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "npm/aarch64-pc-windows-msvc/package.json" || true
-              fi
-              ;;
-            x86_64-unknown-linux-gnu)
-              mkdir -p npm/x86_64-unknown-linux-gnu/bin
-              cp target/${{ matrix.target }}/release/anymon npm/x86_64-unknown-linux-gnu/bin/anymon
-              ;;
-            aarch64-unknown-linux-gnu)
-              mkdir -p npm/aarch64-unknown-linux-gnu/bin
-              cp target/${{ matrix.target }}/release/anymon npm/aarch64-unknown-linux-gnu/bin/anymon
-              ;;
-            x86_64-apple-darwin)
-              mkdir -p npm/x86_64-apple-darwin/bin
-              cp target/${{ matrix.target }}/release/anymon npm/x86_64-apple-darwin/bin/anymon
-              ;;
-            aarch64-apple-darwin)
-              mkdir -p npm/aarch64-apple-darwin/bin
-              cp target/${{ matrix.target }}/release/anymon npm/aarch64-apple-darwin/bin/anymon
-              ;;
-          esac
-          # Archive for release
-          if [ "${{ matrix.archive }}" = "zip" ]; then
-            7z a $ARTIFACT_NAME.zip $ARTIFACT_NAME/*
-            echo "ARCHIVE=$ARTIFACT_NAME.zip" >> $GITHUB_ENV
-          else
-            tar -czvf $ARTIFACT_NAME.tar.gz $ARTIFACT_NAME/*
-            echo "ARCHIVE=$ARTIFACT_NAME.tar.gz" >> $GITHUB_ENV
-          fi
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org/'
-
-      - name: Update npm package versions
-        run: |
-          node .github/scripts/update-npm-versions.js
-
-      - name: Publish platform npm packages
-        shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for pkg in npm/*/package.json; do
-            pkgdir=$(dirname "$pkg")
-            base=$(basename "$pkgdir")
-            if [ "$base" = "anymon" ]; then
-              continue
-            fi
-            # Ensure Windows packages use .exe for the binary name even if a no-ext file exists
-            dest_ext=""
-            case "${{ matrix.target }}" in
-              *-pc-windows-msvc)
-                dest_ext=".exe"
-                ;;
-            esac
-            # Ensure bin dir exists for package and try to copy any available binary directly
-            if [ ! -d "$pkgdir/bin" ]; then
-              mkdir -p "$pkgdir/bin"
-            fi
-            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
-              mv "$pkgdir/bin/anymon" "$pkgdir/bin/anymon.exe" || true
-            fi
-            if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
-              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
-                cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
-              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
-                cp "target/${{ matrix.target }}/release/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
-                cp "anymon-${{ matrix.target }}/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
-                cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
-              fi
-            fi
-
-            # For Windows packages, ensure package.json includes the bin directory so npm includes the exe
-            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
-              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
-            fi
-
-            # Debug: show what's in the package bin and package.json before publishing
-            echo "Contents of $pkgdir/bin:" || true
-            ls -la "$pkgdir/bin" || true
-            echo "package.json for $pkgdir:" || true
-            cat "$pkgdir/package.json" || true
-
-            if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
-              version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")
-              if npm view "$name@$version" >/dev/null 2>&1; then
-                echo "Skipping $name@$version (already published)"
-              else
-                (cd "$pkgdir" && npm publish --access public) || true
-              fi
-            fi
-          done
-
-      - name: Publish main npm package
-        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
-        shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -f npm/anymon/package.json ]; then
-            name=$(node -e "console.log(require('./'+process.argv[1]).name)" npm/anymon/package.json)
-            version=$(node -e "console.log(require('./'+process.argv[1]).version)" npm/anymon/package.json)
-            if npm view "$name@$version" >/dev/null 2>&1; then
-              echo "Skipping $name@$version (already published)"
-            else
-              cd npm/anymon
-              npm publish --access public || true
-            fi
-          fi
-
-      - name: Upload artifact to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            anymon-*.zip
-            anymon-*.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-next:
-    name: Build and Upload Artifacts (Pre-release)
-    if: ${{ github.event.release.prerelease }}
-    environment: next
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, zig: true, smoke: true }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu, zig: true }
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, zig: true, smoke: true }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-musl, zig: true }
+          - { os: macos-latest, target: x86_64-apple-darwin }
+          - { os: macos-latest, target: aarch64-apple-darwin, smoke: true }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, smoke: true }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc }
     runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            archive: tar.gz
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            archive: tar.gz
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            archive: tar.gz
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            archive: tar.gz
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            archive: zip
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            archive: zip
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          ref: ${{ env.TAG }}
 
-      - name: Install cross toolchain (aarch64 only)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
-      - name: Set up cargo config for cross-compiling (aarch64 only)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          mkdir -p .cargo
-          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
-          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
+      - name: Install Zig
+        if: matrix.zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
 
-      - name: Build release
-        run: cargo build --release --target ${{ matrix.target }}
+      - name: Install cargo-zigbuild
+        if: matrix.zig
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
 
-      - name: Prepare artifact
+      - name: Build
+        shell: bash
+        run: .github/scripts/build.sh "${{ matrix.target }}"
+
+      - name: Smoke test
+        if: matrix.smoke
         shell: bash
         run: |
-          ARTIFACT_NAME="anymon-${{ matrix.target }}"
-          mkdir $ARTIFACT_NAME
-          cp target/${{ matrix.target }}/release/anymon $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon.exe $ARTIFACT_NAME/ 2>/dev/null || true
-          cp target/${{ matrix.target }}/release/anymon-shell $ARTIFACT_NAME/ 2>/dev/null || cp target/${{ matrix.target }}/release/anymon-shell.exe $ARTIFACT_NAME/ 2>/dev/null || true
-          # Ensure npm bin directories exist and copy binaries
-          case "${{ matrix.target }}" in
-            x86_64-pc-windows-msvc)
-              mkdir -p npm/x86_64-pc-windows-msvc/bin
-              cp target/${{ matrix.target }}/release/anymon.exe npm/x86_64-pc-windows-msvc/bin/anymon.exe
-              ;;
-            aarch64-pc-windows-msvc)
-              mkdir -p npm/aarch64-pc-windows-msvc/bin
-              cp target/${{ matrix.target }}/release/anymon.exe npm/aarch64-pc-windows-msvc/bin/anymon.exe
-              ;;
-            x86_64-unknown-linux-gnu)
-              mkdir -p npm/x86_64-unknown-linux-gnu/bin
-              cp target/${{ matrix.target }}/release/anymon npm/x86_64-unknown-linux-gnu/bin/anymon
-              ;;
-            aarch64-unknown-linux-gnu)
-              mkdir -p npm/aarch64-unknown-linux-gnu/bin
-              cp target/${{ matrix.target }}/release/anymon npm/aarch64-unknown-linux-gnu/bin/anymon
-              ;;
-            x86_64-apple-darwin)
-              mkdir -p npm/x86_64-apple-darwin/bin
-              cp target/${{ matrix.target }}/release/anymon npm/x86_64-apple-darwin/bin/anymon
-              ;;
-            aarch64-apple-darwin)
-              mkdir -p npm/aarch64-apple-darwin/bin
-              cp target/${{ matrix.target }}/release/anymon npm/aarch64-apple-darwin/bin/anymon
-              ;;
-          esac
-          # Archive for release
-          if [ "${{ matrix.archive }}" = "zip" ]; then
-            7z a $ARTIFACT_NAME.zip $ARTIFACT_NAME/*
-            echo "ARCHIVE=$ARTIFACT_NAME.zip" >> $GITHUB_ENV
-          else
-            tar -czvf $ARTIFACT_NAME.tar.gz $ARTIFACT_NAME/*
-            echo "ARCHIVE=$ARTIFACT_NAME.tar.gz" >> $GITHUB_ENV
-          fi
+          bin="target/${{ matrix.target }}/release/anymon"
+          "$bin" --version
+          "$bin" --version | grep -q "${TAG#v}"
+          "$bin" --once --color never -- echo "anymon works"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org/'
-
-      - name: Update npm package versions
-        run: |
-          node .github/scripts/update-npm-versions.js
-
-      - name: Publish platform npm packages
+      - name: Package
         shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for pkg in npm/*/package.json; do
-            pkgdir=$(dirname "$pkg")
-            base=$(basename "$pkgdir")
-            if [ "$base" = "anymon" ]; then
-              continue
-            fi
-            # Ensure bin dir exists for package and try to copy any available binary directly
-            dest_ext=""
-            case "${{ matrix.target }}" in
-              *-pc-windows-msvc)
-                dest_ext=".exe"
-                ;;
-            esac
-            if [ ! -d "$pkgdir/bin" ]; then
-              mkdir -p "$pkgdir/bin"
-            fi
-            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
-              mv "$pkgdir/bin/anymon" "$pkgdir/bin/anymon.exe" || true
-            fi
-            if [ ! -f "$pkgdir/bin/anymon" ] && [ ! -f "$pkgdir/bin/anymon.exe" ]; then
-              if [ -f "target/${{ matrix.target }}/release/anymon.exe" ]; then
-                cp "target/${{ matrix.target }}/release/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
-              elif [ -f "target/${{ matrix.target }}/release/anymon" ]; then
-                cp "target/${{ matrix.target }}/release/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon.exe" ]; then
-                cp "anymon-${{ matrix.target }}/anymon.exe" "$pkgdir/bin/anymon${dest_ext}" || true
-              elif [ -f "anymon-${{ matrix.target }}/anymon" ]; then
-                cp "anymon-${{ matrix.target }}/anymon" "$pkgdir/bin/anymon${dest_ext}" || true
-              fi
-            fi
+        run: .github/scripts/package.sh "${{ matrix.target }}" dist
 
-            # For Windows packages, ensure package.json includes the bin directory so npm includes the exe
-            if [ "$dest_ext" = ".exe" ] && [ -f "$pkgdir/package.json" ]; then
-              node -e "let p=require('./'+process.argv[1]); p.files=['bin']; p.bin={'anymon.exe':'bin/anymon.exe'}; require('fs').writeFileSync(process.argv[1], JSON.stringify(p,null,2));" "$pkgdir/package.json" || true
-            fi
-
-            # Debug: show what's in the package bin and package.json before publishing
-            echo "Contents of $pkgdir/bin:" || true
-            ls -la "$pkgdir/bin" || true
-            echo "package.json for $pkgdir:" || true
-            cat "$pkgdir/package.json" || true
-
-            if [ -f "$pkgdir/bin/anymon" ] || [ -f "$pkgdir/bin/anymon.exe" ]; then
-              name=$(node -e "console.log(require('./'+process.argv[1]).name)" "$pkgdir/package.json")
-              version=$(node -e "console.log(require('./'+process.argv[1]).version)" "$pkgdir/package.json")
-              if npm view "$name@$version" >/dev/null 2>&1; then
-                echo "Skipping $name@$version (already published)"
-              else
-                (cd "$pkgdir" && npm publish --access public --tag next) || true
-              fi
-            fi
-          done
-
-      - name: Publish main npm package
-        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        shell: bash
-        run: |
-          if [ -f npm/anymon/package.json ]; then
-            name=$(node -e "console.log(require('./'+process.argv[1]).name)" npm/anymon/package.json)
-            version=$(node -e "console.log(require('./'+process.argv[1]).version)" npm/anymon/package.json)
-            if npm view "$name@$version" >/dev/null 2>&1; then
-              echo "Skipping $name@$version (already published)"
-            else
-              cd npm/anymon
-              npm publish --access public --tag next || true
-            fi
-          fi
-
-      - name: Upload artifact to release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
+          name: anymon-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  github:
+    name: Upload release assets
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: anymon-*
+          path: dist
+          merge-multiple: true
+
+      - name: Combine checksums
+        run: |
+          cd dist
+          cat *.sha256 > SHA256SUMS
+          cat SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          fail_on_unmatched_files: true
           files: |
-            anymon-*.zip
-            anymon-*.tar.gz
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+            dist/SHA256SUMS
+
+  npm:
+    name: Publish to npm
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.version.outputs.prerelease == 'true' && 'next' || 'stable' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: anymon-*
+          path: dist
+          merge-multiple: true
+
+      - name: Prepare packages
+        run: .github/scripts/prepare-npm.sh dist
+
+      - name: Publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DIST_TAG: ${{ needs.version.outputs.prerelease == 'true' && 'next' || 'latest' }}
+        run: .github/scripts/publish-npm.sh

@@ -3,3 +3,5 @@ dist/
 build/
 bin/anymon*
 node_modules/
+npm/*/bin/anymon
+npm/*/bin/anymon.exe
