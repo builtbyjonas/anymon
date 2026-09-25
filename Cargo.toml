@@ -5,10 +5,44 @@ members = [
     "crates/anymon-runner",
     "crates/anymon-shell",
 ]
-resolver = "1"
+exclude = ["example_project"]
+resolver = "2"
 
 [workspace.package]
+version = "1.0.0"
 authors = ["Anymon Contributors"]
-version = "0.7.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/builtbyjonas/anymon"
+homepage = "https://anymon.xyz"
+rust-version = "1.88"
+
+[workspace.dependencies]
+anymon-config = { path = "crates/anymon-config", version = "1.0.0" }
+anymon-runner = { path = "crates/anymon-runner", version = "1.0.0" }
+anymon-shell = { path = "crates/anymon-shell", version = "1.0.0" }
+
+anyhow = "1"
+clap = { version = "4", features = ["derive", "wrap_help"] }
+clap_complete = "4"
+colored = "3"
+flate2 = "1"
+globset = "0.4"
+ignore = "0.4"
+libc = "0.2"
+notify = "8.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tar = "0.4"
+tempfile = "3"
+tokio = { version = "1", features = ["io-util", "macros", "process", "rt", "signal", "sync", "time"] }
+toml = "1.1"
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+windows-sys = "0.61"
+zip = { version = "8", default-features = false, features = ["deflate"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

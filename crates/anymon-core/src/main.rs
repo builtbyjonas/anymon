@@ -1,287 +1,459 @@
-use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
-use reqwest::blocking as reqwest_blocking;
-use std::env;
-use std::fs;
-use std::io::Write;
+//! The `anymon` command-line tool.
 
-use anymon_config::Config as AnymonConfig;
-use anymon_runner::pref;
+mod check;
+mod cli;
+mod init;
+mod update;
 
-#[derive(Parser, Debug)]
-#[command(name = "anymon")]
-#[command(about = "Ultra-fast, language-agnostic file watcher that runs anything on change.", long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
+use std::io::IsTerminal;
+use std::path::{Path, PathBuf};
 
-    /// Path(s) to watch (overrides config watch roots)
-    #[arg(long, value_name = "PATH", global = true)]
-    watch: Option<Vec<String>>,
+use anyhow::{anyhow, Context, Result};
+use anymon_config::{Config, GlobalConfig, Run, TaskConfig};
+use anymon_runner::ui::{self, Verbosity};
+use anymon_runner::{paths, Plan, PlanOptions};
+use anymon_shell::{CommandLine, Shell, SpawnOptions};
+use clap::{CommandFactory, Parser};
 
-    /// Config file (TOML only)
-    #[arg(long, value_name = "FILE", global = true)]
-    config: Option<String>,
+use cli::{Cli, ColorChoice, Command, GlobalArgs, WatchArgs};
 
-    /// Debounce window (ms)
-    #[arg(long, value_name = "MS", global = true, default_value_t = 30)]
-    debounce: u64,
-
-    /// Kill timeout (ms)
-    #[arg(long, value_name = "MS", global = true, default_value_t = 2000)]
-    kill_timeout: u64,
-
-    /// Run once and exit
-    #[arg(long, global = true, default_value_t = false)]
-    once: bool,
+/// An error together with the exit code it should produce.
+struct Failure {
+    code: i32,
+    error: anyhow::Error,
 }
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Run a command once (no shell interpretation)
-    Run {
-        #[arg(value_name = "COMMAND")]
-        command: String,
-    },
-    /// Watch files based on TOML config and run tasks on change
-    Watch,
-    /// Debug mode (extra output)
-    Debug,
-    /// Update anymon to the latest version
-    Update,
+impl Failure {
+    /// A problem with the config or the command line (exit code 2).
+    fn usage(error: impl Into<anyhow::Error>) -> Self {
+        Failure {
+            code: 2,
+            error: error.into(),
+        }
+    }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+impl<E: Into<anyhow::Error>> From<E> for Failure {
+    fn from(error: E) -> Self {
+        Failure {
+            code: 1,
+            error: error.into(),
+        }
+    }
+}
+
+type Outcome = std::result::Result<i32, Failure>;
+
+fn main() {
     let cli = Cli::parse();
+    configure_output(&cli.global);
+    update::cleanup_previous_update();
 
-    let config = if let Some(config_path) = &cli.config {
-        if config_path.ends_with(".toml") {
-            match AnymonConfig::from_toml(config_path) {
-                Ok(cfg) => Some(cfg),
-                Err(e) => {
-                    eprintln!("{} failed to load TOML config: {e}", pref());
-                    None
-                }
-            }
-        } else {
-            eprintln!(
-                "{} unsupported config file format (only TOML allowed): {config_path}",
-                pref()
-            );
-            None
+    let code = match dispatch(cli) {
+        Ok(code) => code,
+        Err(failure) => {
+            ui::error(format!("{:#}", failure.error));
+            failure.code
         }
-    } else {
-        None
     };
-
-    match &cli.command {
-        Some(Commands::Run { command }) => {
-            println!("{} run: {}", pref(), command);
-            let mut parts = command.split_whitespace();
-            if let Some(prog) = parts.next() {
-                let args: Vec<&str> = parts.collect();
-                match anymon_shell::run_command(prog, &args) {
-                    Ok(out) => {
-                        if !out.stdout.is_empty() {
-                            print!("{}", out.stdout);
-                        }
-                        if !out.stderr.is_empty() {
-                            eprint!("{}", out.stderr);
-                        }
-                        println!("{} process exited: {}", pref(), out.status);
-                    }
-                    Err(e) => eprintln!("{} failed to run '{}': {}", pref(), command, e),
-                }
-            } else {
-                eprintln!("{} empty command", pref());
-            }
-        }
-        Some(Commands::Watch) => {
-            println!("{} watch mode", pref());
-            if let Some(cfg) = config {
-                anymon_runner::watch_mode(cfg, cli.watch, cli.debounce, cli.kill_timeout).await?;
-            } else {
-                eprintln!("{} watch requires --config anymon.toml", pref());
-            }
-        }
-        Some(Commands::Debug) => {
-            println!("{} debug mode", pref());
-            if let Some(cfg) = &config {
-                println!("{} loaded config: {:#?}", pref(), cfg);
-            } else {
-                println!("{} no config loaded", pref());
-            }
-        }
-        Some(Commands::Update) => {
-            // Move blocking update logic to a sync function and call it in a blocking context
-            tokio::task::block_in_place(|| {
-                if let Err(e) = update_anymon() {
-                    eprintln!("{} update failed: {e}", pref());
-                }
-            });
-        }
-        None => {
-            println!("{} no command specified. See --help.", pref());
-        }
-    }
-    Ok(())
+    // Exit right away: a thread blocked on reading stdin must not keep the
+    // process alive.
+    std::process::exit(code);
 }
 
-fn update_anymon() -> Result<()> {
-    println!("{} updating anymon to the latest version...", pref());
-    let os = if cfg!(target_os = "windows") {
-        "windows"
-    } else if cfg!(target_os = "linux") {
-        "linux"
-    } else if cfg!(target_os = "macos") {
-        "darwin"
-    } else {
-        eprintln!("{} unsupported OS for update", pref());
-        return Ok(());
+fn configure_output(global: &GlobalArgs) {
+    let color = match global.color {
+        ColorChoice::Always => true,
+        ColorChoice::Never => false,
+        ColorChoice::Auto => {
+            let forced = ["CLICOLOR_FORCE", "FORCE_COLOR"]
+                .iter()
+                .any(|v| std::env::var_os(v).is_some_and(|v| !v.is_empty() && v != "0"));
+            let disabled = std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty())
+                || std::env::var_os("TERM").is_some_and(|t| t == "dumb");
+            forced || (!disabled && std::io::stderr().is_terminal())
+        }
     };
-    let arch = if cfg!(target_arch = "x86_64") {
-        "amd64"
-    } else if cfg!(target_arch = "aarch64") {
-        "arm64"
-    } else if cfg!(target_arch = "arm") {
-        "armv7"
+    ui::set_color(color);
+    ui::set_verbosity(if global.quiet {
+        Verbosity::Quiet
+    } else if global.verbose {
+        Verbosity::Verbose
     } else {
-        eprintln!("{} unsupported architecture for update", pref());
-        return Ok(());
-    };
+        Verbosity::Normal
+    });
+}
 
-    let repo = "builtbyjonas/anymon";
-    let api_url = format!("https://api.github.com/repos/{}/releases", repo);
-    let client = reqwest_blocking::Client::new();
-    let releases: serde_json::Value = client
-        .get(&api_url)
-        .header("User-Agent", "anymon-updater")
-        .send()
-        .context("Failed to fetch releases info")?
-        .json()
-        .context("Failed to parse releases info")?;
-
-    let releases = releases.as_array().cloned().unwrap_or_default();
-    if releases.is_empty() {
-        println!(
-            "{} already on the latest version (no releases found)",
-            pref()
-        );
-        return Ok(());
-    }
-
-    let latest = &releases[0];
-    let latest_ver = latest["tag_name"].as_str().unwrap_or("");
-    let current_ver = env!("CARGO_PKG_VERSION");
-    if latest_ver.trim_start_matches('v') == current_ver {
-        println!(
-            "{} already on the latest version (v{})",
-            pref(),
-            current_ver
-        );
-        return Ok(());
-    }
-
-    let assets = latest["assets"].as_array().cloned().unwrap_or_default();
-    let mut asset_url = None;
-    let mut asset_name = None;
-    for asset in &assets {
-        let url = asset["browser_download_url"].as_str().unwrap_or("");
-        let name = asset["name"].as_str().unwrap_or("");
-        if url.contains(os) && url.contains(arch) {
-            asset_url = Some(url.to_string());
-            asset_name = Some(name.to_string());
-            break;
+fn dispatch(cli: Cli) -> Outcome {
+    let global = cli.global;
+    match cli.command {
+        None => watch(cli.watch, &global),
+        Some(Command::Watch(args)) => watch(cli.watch.merge(args), &global),
+        Some(other) => {
+            if !cli.watch.is_empty() {
+                return Err(Failure::usage(anyhow!(
+                    "watch options must be used with `anymon` or `anymon watch`"
+                )));
+            }
+            match other {
+                Command::Watch(_) => unreachable!("handled above"),
+                Command::Run { command, shell } => run_command(command, shell),
+                Command::Init { force } => init(force),
+                Command::Check => check(&global),
+                Command::Update { check } => Ok(update::run(check)?),
+                Command::Completions { shell } => {
+                    clap_complete::generate(
+                        shell,
+                        &mut Cli::command(),
+                        "anymon",
+                        &mut std::io::stdout(),
+                    );
+                    Ok(0)
+                }
+            }
         }
     }
-    if asset_url.is_none() {
-        eprintln!(
-            "{} no prebuilt binary found for {}/{} in release {}",
-            pref(),
-            os,
-            arch,
-            latest_ver
-        );
-        return Ok(());
+}
+
+fn runtime() -> Result<tokio::runtime::Runtime> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("failed to start the async runtime")
+}
+
+fn plan_options(args: &WatchArgs) -> PlanOptions {
+    PlanOptions {
+        paths: args.paths.clone(),
+        debounce_ms: args.debounce,
+        kill_timeout_ms: args.kill_timeout,
+        gitignore: args.no_gitignore.then_some(false),
+        poll_ms: args.poll,
+        ignore: args.ignore.clone(),
+        tasks: args.tasks.clone(),
     }
-    let asset_url = asset_url.unwrap();
-    let asset_name = asset_name.unwrap();
+}
+
+fn watch(args: WatchArgs, global: &GlobalArgs) -> Outcome {
+    let cwd = std::env::current_dir().context("cannot determine the current directory")?;
+    let options = plan_options(&args);
+
+    if !args.command.is_empty() {
+        if global.config.is_some() {
+            return Err(Failure::usage(anyhow!(
+                "--config cannot be combined with a command; put the command in the config instead"
+            )));
+        }
+        if !args.tasks.is_empty() {
+            return Err(Failure::usage(anyhow!(
+                "--task cannot be combined with a command"
+            )));
+        }
+        let root = paths::canonicalize(&cwd)?;
+        let config = ad_hoc_config(&args, &root);
+        let plan = Plan::new(&config, &root, None, &options).map_err(Failure::usage)?;
+        return execute(plan, args.once, None);
+    }
+
+    for (flag, used) in [
+        ("--pattern", !args.patterns.is_empty()),
+        ("--exts", !args.exts.is_empty()),
+        ("--no-restart", args.no_restart),
+        ("--shell", args.shell.is_some()),
+    ] {
+        if used {
+            return Err(Failure::usage(anyhow!(
+                "{flag} only applies to a command given after `--`, e.g. `anymon {flag} ... -- cargo test`"
+            )));
+        }
+    }
+
+    let config_path = config_path(global, &cwd)?;
+    let load = || -> Result<Plan> {
+        let config = Config::load(&config_path)?;
+        let root = config_path.parent().unwrap_or(&cwd);
+        Plan::new(&config, root, Some(&config_path), &options)
+    };
+    let plan = load().map_err(Failure::usage)?;
+    execute(plan, args.once, Some(&load))
+}
+
+fn execute(plan: Plan, once: bool, reload: Option<anymon_runner::Reloader<'_>>) -> Outcome {
+    let rt = runtime()?;
+    if once {
+        Ok(rt.block_on(anymon_runner::run_once(plan))?)
+    } else {
+        rt.block_on(anymon_runner::watch(plan, reload))?;
+        Ok(0)
+    }
+}
+
+/// The config file to use: `--config`, or the closest `Anymon.toml`.
+fn config_path(global: &GlobalArgs, cwd: &Path) -> std::result::Result<PathBuf, Failure> {
+    match &global.config {
+        Some(path) => {
+            let path = cwd.join(path);
+            if !path.is_file() {
+                return Err(Failure::usage(anyhow!(
+                    "config file {} not found",
+                    path.display()
+                )));
+            }
+            Ok(path)
+        }
+        None => anymon_config::discover(cwd).ok_or_else(|| {
+            Failure::usage(anyhow!(
+                "no Anymon.toml found in {} or its parent directories\n\n  \
+                 Create one with `anymon init`, or run a command directly:\n    \
+                 anymon -e rs -- cargo run",
+                cwd.display()
+            ))
+        }),
+    }
+}
+
+/// Build a single-task config for `anymon [options] -- COMMAND`.
+fn ad_hoc_config(args: &WatchArgs, root: &Path) -> Config {
+    let run = match args.command.as_slice() {
+        [single] => Run::Command(single.clone()),
+        argv => Run::Argv(argv.to_vec()),
+    };
+
+    let exts: Vec<String> = args
+        .exts
+        .iter()
+        .map(|e| {
+            e.trim()
+                .trim_start_matches("*.")
+                .trim_start_matches('.')
+                .to_string()
+        })
+        .filter(|e| !e.is_empty())
+        .collect();
+    let mut globs: Vec<String> = args.patterns.clone();
+    globs.extend(exts.iter().map(|ext| format!("*.{ext}")));
+
+    // With --watch, apply the filters inside each watched path so that paths
+    // outside the current directory work as expected.
+    let watch = if args.paths.is_empty() {
+        globs
+    } else {
+        let mut watch = Vec::new();
+        for path in &args.paths {
+            let resolved = paths::resolve(path, root);
+            let prefix = match resolved.strip_prefix(root) {
+                Ok(rel) => rel.to_string_lossy().replace('\\', "/"),
+                Err(_) => escape_glob(&resolved.to_string_lossy().replace('\\', "/")),
+            };
+            if !resolved.is_dir() {
+                watch.push(if prefix.is_empty() {
+                    "**".into()
+                } else {
+                    format!("/{prefix}")
+                });
+                continue;
+            }
+            let base = if prefix.is_empty() {
+                String::new()
+            } else {
+                format!("{}/", prefix.trim_end_matches('/'))
+            };
+            let anchor = if base.is_empty() || base.starts_with('/') || base.contains(':') {
+                ""
+            } else {
+                "/"
+            };
+            if globs.is_empty() {
+                watch.push(format!("{anchor}{base}**"));
+            }
+            for glob in &globs {
+                let glob = if glob.contains('/') {
+                    glob.clone()
+                } else {
+                    format!("**/{glob}")
+                };
+                watch.push(format!("{anchor}{base}{glob}"));
+            }
+        }
+        watch
+    };
+
+    Config {
+        global: GlobalConfig {
+            shell: args.shell.clone(),
+            ..GlobalConfig::default()
+        },
+        tasks: vec![TaskConfig {
+            name: None,
+            watch,
+            ignore: Vec::new(),
+            run,
+            restart: Some(!args.no_restart),
+            run_on_start: Some(true),
+            cwd: None,
+            env: Default::default(),
+            shell: None,
+        }],
+    }
+}
+
+fn escape_glob(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        if matches!(c, '*' | '?' | '[' | ']' | '{' | '}') {
+            out.push('[');
+            out.push(c);
+            out.push(']');
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn run_command(command: Vec<String>, shell: Option<String>) -> Outcome {
+    let parsed = match command.as_slice() {
+        [single] => CommandLine::parse(single),
+        argv => CommandLine::from_argv(argv.to_vec()),
+    }
+    .map_err(|err| Failure::usage(anyhow!("invalid command: {err}")))?;
+
+    let options = SpawnOptions {
+        shell: shell.as_deref().map(Shell::from_name).unwrap_or_default(),
+        cwd: None,
+        env: Vec::new(),
+        // The command is in the foreground: it may read stdin and receives
+        // Ctrl-C from the terminal directly.
+        inherit_stdin: true,
+        isolate: false,
+    };
+    ui::detail(format!("$ {parsed}"));
+
+    let rt = runtime()?;
+    let code = rt.block_on(async {
+        let mut process = anymon_shell::spawn(&parsed, &options)
+            .with_context(|| format!("failed to run `{parsed}`"))?;
+        loop {
+            tokio::select! {
+                status = process.wait() => return Ok::<_, anyhow::Error>(anymon_shell::exit_code(&status?)),
+                // The command handles Ctrl-C itself; wait for it to exit.
+                _ = tokio::signal::ctrl_c() => {}
+            }
+        }
+    })?;
+    Ok(code)
+}
+
+fn init(force: bool) -> Outcome {
+    let cwd = std::env::current_dir()?;
+    if !force {
+        if let Some(existing) = anymon_config::CONFIG_FILE_NAMES
+            .iter()
+            .map(|name| cwd.join(name))
+            .find(|path| path.is_file())
+        {
+            return Err(Failure::usage(anyhow!(
+                "{} already exists (use --force to overwrite it)",
+                existing.display()
+            )));
+        }
+    }
+    let template = init::template_for(&cwd);
+    let path = cwd.join("Anymon.toml");
+    std::fs::write(&path, &template.content)
+        .with_context(|| format!("cannot write {}", path.display()))?;
     println!(
-        "{} downloading {} (version {})...",
-        pref(),
-        asset_name,
-        latest_ver
+        "Created {} for a {} project.",
+        path.display(),
+        template.kind
     );
-    let mut resp = client
-        .get(&asset_url)
-        .header("User-Agent", "anymon-updater")
-        .send()
-        .context("Failed to download asset")?;
-    let mut buf: Vec<u8> = vec![];
-    resp.copy_to(&mut buf)
-        .context("Failed to read asset data")?;
+    println!("Review the task, then start watching with `anymon`.");
+    Ok(0)
+}
 
-    let current_exe = env::current_exe().context("Failed to get current executable path")?;
-    let exe_dir = current_exe
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."))
-        .to_path_buf();
+fn check(global: &GlobalArgs) -> Outcome {
+    let cwd = std::env::current_dir()?;
+    let path = config_path(global, &cwd)?;
+    let config = Config::load(&path).map_err(Failure::usage)?;
+    let root = path.parent().unwrap_or(&cwd);
+    let plan =
+        Plan::new(&config, root, Some(&path), &PlanOptions::default()).map_err(Failure::usage)?;
+    print!("{}", check::describe(&plan));
+    Ok(0)
+}
 
-    // Prefer standard per-user install directory if present (or create it):
-    // Windows: %LOCALAPPDATA%\anymon
-    // Linux: $XDG_DATA_HOME/anymon or $HOME/.local/share/anymon
-    // macOS: $HOME/Library/Application Support/anymon
-    let candidate_dir = if cfg!(target_os = "windows") {
-        std::env::var("LOCALAPPDATA")
-            .map(|v| std::path::PathBuf::from(v).join("anymon"))
-            .unwrap_or_else(|_| exe_dir.clone())
-    } else if cfg!(target_os = "linux") {
-        std::env::var("XDG_DATA_HOME")
-            .map(|v| std::path::PathBuf::from(v).join("anymon"))
-            .unwrap_or_else(|_| {
-                std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
-                    .join(".local/share/anymon")
-            })
-    } else if cfg!(target_os = "macos") {
-        std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
-            .join("Library/Application Support/anymon")
-    } else {
-        exe_dir.clone()
-    };
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let candidate_path = if cfg!(target_os = "windows") {
-        candidate_dir.join("anymon.exe")
-    } else {
-        candidate_dir.join("anymon")
-    };
-
-    // Choose final path: prefer candidate if directory exists or can be created, otherwise fallback to exe dir
-    let new_path = if candidate_dir.exists()
-        || candidate_path.exists()
-        || std::fs::create_dir_all(&candidate_dir).is_ok()
-    {
-        candidate_path
-    } else if cfg!(target_os = "windows") {
-        exe_dir.join("anymon.exe")
-    } else {
-        exe_dir.join("anymon")
-    };
-
-    let tmp_path = new_path.with_extension("tmp");
-    let mut file =
-        fs::File::create(&tmp_path).context("Failed to create temp file for new binary")?;
-    file.write_all(&buf).context("Failed to write new binary")?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = file.metadata()?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&tmp_path, perms)?;
+    fn args(command: &[&str]) -> WatchArgs {
+        WatchArgs {
+            command: command.iter().map(|s| s.to_string()).collect(),
+            ..WatchArgs::default()
+        }
     }
-    file.sync_all()?;
 
-    fs::rename(&tmp_path, &new_path).context("Failed to replace binary")?;
-    println!("{} updated {} successfully!", pref(), new_path.display());
-    Ok(())
+    #[test]
+    fn ad_hoc_single_argument_is_a_command_line() {
+        let cfg = ad_hoc_config(&args(&["cargo test && cargo doc"]), Path::new("/p"));
+        assert_eq!(
+            cfg.tasks[0].run,
+            Run::Command("cargo test && cargo doc".into())
+        );
+        assert!(cfg.tasks[0].watch.is_empty());
+        assert_eq!(cfg.tasks[0].restart, Some(true));
+    }
+
+    #[test]
+    fn ad_hoc_multiple_arguments_are_an_argv() {
+        let mut a = args(&["cargo", "run", "--", "--port", "80"]);
+        a.exts = vec!["rs".into(), ".toml".into(), "*.md".into(), " ".into()];
+        a.patterns = vec!["assets/**".into()];
+        a.no_restart = true;
+        let cfg = ad_hoc_config(&a, Path::new("/p"));
+        assert!(matches!(&cfg.tasks[0].run, Run::Argv(v) if v.len() == 5));
+        assert_eq!(
+            cfg.tasks[0].watch,
+            vec!["assets/**", "*.rs", "*.toml", "*.md"]
+        );
+        assert_eq!(cfg.tasks[0].restart, Some(false));
+    }
+
+    #[test]
+    fn ad_hoc_watch_paths_scope_the_filters() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = paths::canonicalize(dir.path()).unwrap();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("main.py"), "").unwrap();
+
+        let mut a = args(&["make"]);
+        a.paths = vec![root.join("src"), root.join("main.py")];
+        a.exts = vec!["rs".into()];
+        let cfg = ad_hoc_config(&a, &root);
+        assert_eq!(cfg.tasks[0].watch, vec!["/src/**/*.rs", "/main.py"]);
+
+        let mut a = args(&["make"]);
+        a.paths = vec![root.clone()];
+        let cfg = ad_hoc_config(&a, &root);
+        assert_eq!(cfg.tasks[0].watch, vec!["**"]);
+
+        // The generated patterns compile and match what was asked for.
+        let mut a = args(&["make"]);
+        a.paths = vec![root.join("src")];
+        a.exts = vec!["rs".into()];
+        let plan = Plan::new(
+            &ad_hoc_config(&a, &root),
+            &root,
+            None,
+            &PlanOptions::default(),
+        )
+        .unwrap();
+        assert!(plan.tasks[0].watch.is_match(&root.join("src/deep/lib.rs")));
+        assert!(!plan.tasks[0].watch.is_match(&root.join("other/lib.rs")));
+    }
+
+    #[test]
+    fn escapes_glob_characters() {
+        assert_eq!(escape_glob("/a/[b]/c*"), "/a/[[]b[]]/c[*]");
+    }
 }

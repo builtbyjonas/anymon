@@ -1,14 +1,27 @@
-//! anymon-shell
+//! Command-line parsing and process management for anymon.
 //!
-//! Small crate exposing utilities to run system commands directly
-//! without going through an external interactive shell.
+//! - [`CommandLine`] parses a command string and decides whether it can run
+//!   directly or needs a shell.
+//! - [`spawn`] starts a command in its own process group (Unix) or job object
+//!   (Windows). The returned [`Process`] can stop the whole process tree,
+//!   first gracefully and then by force.
+//! - [`run_command`] is a small blocking helper that runs a program and
+//!   captures its output.
+
+mod parse;
+mod process;
+mod shell;
+
+pub use parse::{CommandLine, ParseError};
+pub use process::{describe_exit, exit_code, spawn, Process, SpawnOptions};
+pub use shell::Shell;
 
 use std::process::Command;
 
-/// Result of running a command.
+/// Output of [`run_command`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandOutput {
-    /// Exit code of the process (or -1 if unavailable).
+    /// Exit code of the process (or -1 if it was killed by a signal).
     pub status: i32,
     /// Captured stdout as UTF-8 (lossy).
     pub stdout: String,
@@ -16,46 +29,14 @@ pub struct CommandOutput {
     pub stderr: String,
 }
 
-/// Run a command directly (no shell), capturing stdout/stderr and exit code.
-///
-/// `cmd` should be the program name or path, and `args` the arguments to pass.
+/// Run a program directly (no shell) and capture its stdout, stderr and exit code.
 pub fn run_command<S: AsRef<str>>(cmd: S, args: &[S]) -> Result<CommandOutput, std::io::Error> {
-    let mut command = Command::new(cmd.as_ref());
-    for a in args {
-        command.arg(a.as_ref());
-    }
-
-    let output = command.output()?;
-
-    let status = output.status.code().unwrap_or(-1);
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
+    let output = Command::new(cmd.as_ref())
+        .args(args.iter().map(AsRef::as_ref))
+        .output()?;
     Ok(CommandOutput {
-        status,
-        stdout,
-        stderr,
+        status: output.status.code().unwrap_or(-1),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn run_echo() {
-        let args: &[&str] = if cfg!(windows) {
-            &["/C", "echo", "hello"]
-        } else {
-            &["-c", "echo hello"]
-        };
-        // On Unix use /bin/sh to test, but crate users should prefer direct programs.
-        if cfg!(windows) {
-            let res = run_command("cmd", args).expect("run cmd");
-            assert!(res.stdout.to_lowercase().contains("hello"));
-        } else {
-            let res = run_command("sh", args).expect("run sh");
-            assert!(res.stdout.contains("hello"));
-        }
-    }
 }

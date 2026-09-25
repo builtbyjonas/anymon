@@ -1,12 +1,21 @@
 [package]
 name = "anymon-config"
-authors = ["Anymon Contributors"]
-description = "Config parsing for anymon"
-version = "0.7.2"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+description = "Configuration schema, parsing and discovery for anymon."
+readme = "README.md"
+keywords = ["config", "toml", "watcher"]
+categories = ["config", "development-tools"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-toml = "1.1"
-anyhow = "1"
+serde = { workspace = true }
+toml = { workspace = true }
+anyhow = "1.0.104"
+
+[dev-dependencies]
+tempfile = { workspace = true }

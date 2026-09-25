@@ -1,26 +1,37 @@
 [package]
 name = "anymon-core"
-authors = ["Anymon Contributors"]
 description = "Ultra-fast, language-agnostic file watcher that runs anything on change."
-version = "0.7.2"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+readme = "README.md"
+keywords = ["watcher", "file-watcher", "hot-reload", "cli", "nodemon"]
+categories = ["command-line-utilities", "development-tools"]
+default-run = "anymon"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 name = "anymon"
 path = "src/main.rs"
 
 [dependencies]
-notify = "8.2"
-globset = "0.4"
-ignore = "0.4"
-tokio = { version = "1", features = ["full"] }
-clap = { version = "4", features = ["derive"] }
-anyhow = "1"
-colored = "3"
-anymon-config = { path = "../anymon-config" }
-anymon-runner = { path = "../anymon-runner" }
-anymon-shell = { path = "../anymon-shell" }
-reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls"] }
-zip = "8"
-serde_json = "1"
+anymon-config = { workspace = true }
+anymon-runner = { workspace = true }
+anymon-shell = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+clap_complete = { workspace = true }
+colored = { workspace = true }
+flate2 = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tar = { workspace = true }
+tokio = { workspace = true }
+ureq = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

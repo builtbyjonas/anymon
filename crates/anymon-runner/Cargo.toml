@@ -1,15 +1,30 @@
 [package]
 name = "anymon-runner"
-authors = ["Anymon Contributors"]
-description = "Runtime and task runner for anymon"
-version = "0.7.2"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+description = "File watching, event filtering and task supervision for anymon."
+readme = "README.md"
+keywords = ["watcher", "file-watcher", "notify", "task-runner"]
+categories = ["development-tools", "filesystem"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-notify = "8.2"
-globset = "0.4"
-anyhow = "1"
-colored = "3"
-anymon-config = { path = "../anymon-config" }
+anymon-config = { workspace = true }
+anymon-shell = { workspace = true }
+anyhow = { workspace = true }
+colored = { workspace = true }
+globset = { workspace = true }
+ignore = { workspace = true }
+notify = { workspace = true }
+tokio = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }

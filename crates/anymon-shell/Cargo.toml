@@ -1,12 +1,34 @@
 [package]
 name = "anymon-shell"
-authors = ["Anymon Contributors"]
-description = "Lightweight crate to run commands directly without relying on external shells."
-version = "0.7.2"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+description = "Command-line parsing and process-tree management for anymon."
+readme = "README.md"
+keywords = ["process", "shell", "command", "spawn"]
+categories = ["command-line-utilities"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [dependencies]
+tokio = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [[bin]]
 name = "anymon-shell"
