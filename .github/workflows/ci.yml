@@ -1,5 +1,8 @@
 name: CI
 
+# All jobs run in the `ci` GitHub environment, so its variables and
+# protection rules apply to them.
+
 on:
   push:
     branches: [main, master]
@@ -21,6 +24,7 @@ jobs:
   lint:
     name: Format & Clippy
     runs-on: ubuntu-latest
+    environment: ci
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +47,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    environment: ci
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +61,7 @@ jobs:
   msrv:
     name: Minimum Rust version
     runs-on: ubuntu-latest
+    environment: ci
     steps:
       - uses: actions/checkout@v4
 

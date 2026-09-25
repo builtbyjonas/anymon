@@ -10,6 +10,39 @@ The first stable release. The watcher, process handling, command line,
 installers and release pipeline have been rewritten with a focus on speed,
 reliability and "it just works".
 
+### Upgrading from 0.x
+
+> **Reinstall anymon once.** The self-updater in 0.7.x and earlier cannot
+> find the release downloads, so `anymon update` never reaches 1.0.0. Run the
+> installer again; it installs into the same directory as before. From 1.0.0
+> on, `anymon update` works.
+>
+> ```sh
+> curl -fsSL https://anymon.xyz/install.sh | sh    # Linux and macOS
+> irm https://anymon.xyz/install.ps1 | iex         # Windows (PowerShell)
+> npm i -g anymon@latest                           # npm installs
+> ```
+
+Breaking changes:
+
+- **Stricter config:** unknown keys and invalid glob patterns are now errors
+  (reported with line and column) instead of being silently ignored.
+- **Patterns follow `.gitignore` rules:** `*` no longer matches across
+  directories. Use `src/**/*.rs` instead of `src/*.rs` for nested files.
+  Patterns without a `/`, such as `*.rs`, match at any depth.
+- **`.gitignore` is respected:** files it excludes no longer trigger tasks.
+  Set `gitignore = false` or pass `--no-gitignore` for the old behavior.
+- **Tasks run in the config file's directory** instead of the directory
+  anymon was started from.
+- **`cmd.exe` is the default shell on Windows** instead of PowerShell. Set
+  `shell = "powershell"` (or `"pwsh"`) in `[global]` to keep PowerShell.
+- **`restart = false`** now runs the task again after the current run
+  finishes, instead of never running it again.
+- **Output:** anymon's own messages go to stderr, and `anymon run` no longer
+  prints its own status lines. It exits with the command's exit code.
+- **Library crates:** the Rust APIs of `anymon-config`, `anymon-runner` and
+  `anymon-shell` changed (see [docs/api.md](docs/api.md)).
+
 ### Added
 
 - **Ad-hoc mode:** `anymon -e rs -- cargo run` watches and runs a command
@@ -91,8 +124,12 @@ reliability and "it just works".
 - **CI and release workflows:** moved from the unmaintained `actions-rs` to
   maintained actions. Linux builds are cross-compiled with cargo-zigbuild.
   Formatting, clippy, tests on three operating systems and the minimum Rust
-  version (1.88) are all checked. npm packages are published only after
-  every build succeeds, platform packages before the main package.
+  version (1.88) are all checked. The publishing jobs run in GitHub
+  environments (`stable`, `next`). npm packages are published only after
+  every build succeeds, platform packages before the main package, using
+  npm trusted publishing (OIDC) instead of a stored token.
+- **npm provenance:** every npm package carries a provenance attestation that
+  links it to the source commit and the workflow run that built it.
 - `anymon debug` is now `anymon check`; `debug` remains as an alias.
 
 ### Fixed
@@ -100,9 +137,9 @@ reliability and "it just works".
 - `anymon update` downloads the correct archive for the running build
   (including musl), extracts the binary instead of writing the archive over
   it, compares versions properly, ignores pre-releases, and replaces the
-  binary atomically. It also works on Windows while anymon is running. The
-  updater in 0.7.x could not find any release asset; reinstall once with the
-  install script to get 1.0.0.
+  binary atomically. It also works on Windows while anymon is running. (The
+  updater in 0.7.x itself cannot be fixed retroactively; see "Upgrading from
+  0.x".)
 - `--once` had no effect.
 - `--watch` paths were joined with patterns in a way that made many
   patterns never match.
@@ -110,7 +147,8 @@ reliability and "it just works".
 - `status` reported exited processes as running.
 - Shutting down could hang until Enter was pressed, because stdin was read on
   the async runtime.
-- Files that are only read (access events) could trigger restarts.
+- On Linux, files that were only opened for reading (access events) could
+  trigger restarts.
 - The example project broke `cargo` commands, because it was inside the
   workspace without being excluded.
 

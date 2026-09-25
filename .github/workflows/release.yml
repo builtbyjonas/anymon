@@ -1,20 +1,36 @@
 name: Release
 
-# Builds and publishes a release when a GitHub release is created. The tag
-# must match the version in Cargo.toml (e.g. v1.0.0). Pre-releases are
-# published to npm under the `next` tag, releases under `latest`.
+# Builds, uploads and publishes a release when a GitHub release is published.
+# The tag must match the version in Cargo.toml (e.g. v1.0.0).
+#
+# Environments: the jobs that publish (GitHub release assets and npm) run in a
+# GitHub environment, so its protection rules (required reviewers, allowed
+# tags) and its variables apply. Releases use `stable`, pre-releases `next`;
+# a manual run can choose any environment.
+#
+# npm: packages are published with trusted publishing (OIDC) and provenance.
+# No npm token is needed; see docs/development.md for the one-time setup.
 
 on:
   release:
-    types: [created]
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
         description: Existing release tag to build and publish (e.g. v1.0.0)
         required: true
+        type: string
+      environment:
+        description: Environment for the publishing jobs (default stable, or next for pre-release tags)
+        required: false
+        type: environment
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -25,7 +41,8 @@ jobs:
     name: Check version
     runs-on: ubuntu-latest
     outputs:
-      prerelease: ${{ steps.meta.outputs.prerelease }}
+      environment: ${{ steps.meta.outputs.environment }}
+      dist-tag: ${{ steps.meta.outputs.dist-tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,15 +59,34 @@ jobs:
 
       - name: Release metadata
         id: meta
+        env:
+          EVENT: ${{ github.event_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "prerelease=${{ github.event.release.prerelease }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT" = "release" ]; then
+            prerelease="$RELEASE_PRERELEASE"
           else
             case "$TAG" in
-              *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
-              *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+              *-*) prerelease=true ;;
+              *) prerelease=false ;;
             esac
           fi
+          if [ "$prerelease" = "true" ]; then
+            environment=next
+            dist_tag=next
+          else
+            environment=stable
+            dist_tag=latest
+          fi
+          if [ -n "$INPUT_ENVIRONMENT" ]; then
+            environment="$INPUT_ENVIRONMENT"
+          fi
+          {
+            echo "environment=$environment"
+            echo "dist-tag=$dist_tag"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::Publishing $TAG in the '$environment' environment (npm tag: $dist_tag)"
 
   build:
     name: Build ${{ matrix.target }}
@@ -113,8 +149,9 @@ jobs:
 
   github:
     name: Upload release assets
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
+    environment: ${{ needs.version.outputs.environment }}
     permissions:
       contents: write
     steps:
@@ -127,7 +164,7 @@ jobs:
       - name: Combine checksums
         run: |
           cd dist
-          cat *.sha256 > SHA256SUMS
+          cat ./*.sha256 > SHA256SUMS
           cat SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
@@ -144,16 +181,27 @@ jobs:
     name: Publish to npm
     needs: [version, build]
     runs-on: ubuntu-latest
-    environment: ${{ needs.version.outputs.prerelease == 'true' && 'next' || 'stable' }}
+    environment: ${{ needs.version.outputs.environment }}
+    permissions:
+      contents: read
+      # Trusted publishing: npm exchanges this job's OIDC token for a
+      # short-lived publish credential and signs provenance with it.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.TAG }}
 
+      # Trusted publishing needs Node >= 22.14 and npm >= 11.5.1.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org/
+          node-version: lts/*
+          registry-url: https://registry.npmjs.org
+
+      - name: Update npm to the latest version
+        run: |
+          npm install --global npm@latest
+          echo "node $(node --version), npm $(npm --version)"
 
       - uses: actions/download-artifact@v4
         with:
@@ -166,6 +214,5 @@ jobs:
 
       - name: Publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          DIST_TAG: ${{ needs.version.outputs.prerelease == 'true' && 'next' || 'latest' }}
+          DIST_TAG: ${{ needs.version.outputs.dist-tag }}
         run: .github/scripts/publish-npm.sh

@@ -66,6 +66,10 @@ npm i -D anymon          # as a dev dependency, e.g. for package.json scripts
 Optional dependencies must not be disabled (`--no-optional` /
 `--omit=optional`), because the binaries are shipped that way.
 
+The packages are published from GitHub Actions with
+[provenance](https://docs.npmjs.com/generating-provenance-statements), so you
+can check which commit and workflow run built them (`npm audit signatures`).
+
 ## Docker
 
 The static musl binary is a good fit for container images:

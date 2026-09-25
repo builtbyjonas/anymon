@@ -48,6 +48,11 @@ irm https://anymon.xyz/install.ps1 | iex
 npm i -g anymon
 ```
 
+> **Upgrading from 0.x?** Run the install command once more. The updater in
+> 0.7.x and earlier can't find the 1.0 release; `anymon update` works from
+> 1.0.0 on. See the [changelog](CHANGELOG.md#upgrading-from-0x) for the
+> breaking changes.
+
 On Linux the installer uses the static musl build, which runs on any
 distribution, including Alpine. See [docs/installation.md](docs/installation.md)
 for all options, including manual downloads, pinned versions and building from

@@ -90,23 +90,66 @@ a `.sha256` file next to it.
    `Cargo.toml`, and in `example_project/Cargo.toml`.
 2. Run `node .github/scripts/update-npm-versions.js` to sync the npm packages.
 3. Add the release notes to `CHANGELOG.md`.
-4. Commit, then create a GitHub release with the tag `v<version>` (for example
-   `v1.0.0`). Mark it as a pre-release for versions such as `1.1.0-rc.1`.
+4. Commit and push, then publish a GitHub release with the tag `v<version>`
+   (for example `v1.0.0`). Mark it as a pre-release for versions such as
+   `1.1.0-rc.1`. Draft releases don't start the workflow until they are
+   published.
 
-Creating the release starts the [release workflow](../.github/workflows/release.yml), which:
+Publishing the release starts the [release workflow](../.github/workflows/release.yml), which:
 
 1. checks that the tag matches the version in `Cargo.toml`,
 2. builds and smoke-tests all eight targets,
 3. uploads the archives, the `.sha256` files and a combined `SHA256SUMS`
    to the release,
-4. publishes the npm packages: the platform packages first, then
-   `anymon`. Pre-releases go to the `next` tag, releases to `latest`.
+4. publishes the npm packages with provenance: the platform packages first,
+   then `anymon`. Pre-releases go to the `next` tag, releases to `latest`.
    Versions that already exist are skipped, so a failed run can be re-run, or
    started manually for an existing tag ("Run workflow").
 
-Publishing needs an `NPM_TOKEN` secret that can publish the `anymon` package
-and the `@anymon/*` scope. The npm job runs in the `stable` environment for
-releases and `next` for pre-releases.
+### Environments
+
+The two publishing jobs (release assets and npm) run in a GitHub
+environment: `stable` for releases and `next` for pre-releases. Protection
+rules on these environments therefore gate the actual publishing, for example
+required reviewers or a rule that only allows `v*` tags. A reviewer approves
+once per release, because both jobs start at the same time after the builds.
+The build jobs don't use an environment because they have no side effects.
+A manual run ("Run workflow") can choose any environment.
+
+All CI jobs run in the `ci` environment.
+
+### npm trusted publishing
+
+The npm packages are published with
+[trusted publishing](https://docs.npmjs.com/trusted-publishers): the npm job
+exchanges its GitHub OIDC token (`id-token: write`) for a short-lived publish
+credential, so no npm token is stored in the repository. npm also attaches
+provenance that links every package to the workflow run that built it. The
+job always uses the latest npm on the latest Node.js LTS, because trusted
+publishing needs npm 11.5.1 or later.
+
+Every package needs a trusted publisher configured on npmjs.com, and npm only
+allows that for packages that already exist. Run the setup script once when
+setting up the repository, or after adding a new platform package. You need
+maintainer rights, account 2FA and npm 11.15 or later.
+
+```sh
+npm install -g npm@latest
+npm login
+.github/scripts/setup-npm-trust.sh
+```
+
+The script publishes a placeholder `0.0.0` for packages that don't exist
+yet; the next release replaces it as `latest`. It then registers
+`builtbyjonas/anymon` → `release.yml` as the trusted publisher of every
+package. Pass `--env stable` to accept publishes from that environment only;
+pre-releases from `next` would then be rejected. You can also configure
+packages by hand: package → Settings → Trusted publisher → GitHub Actions
+(organization `builtbyjonas`, repository `anymon`, workflow `release.yml`).
+
+If a package is missing on npm, the release workflow stops before
+publishing anything and says which one. After trusted publishing works, you
+can delete any old npm automation tokens and the `NPM_TOKEN` secret.
 
 ## Website
 

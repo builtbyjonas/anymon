@@ -29,7 +29,7 @@ for pkg in "${root}"/npm/*/; do
     *.zip) unzip -q "$archive" -d "$tmp" ;;
     *) tar -xzf "$archive" -C "$tmp" ;;
   esac
-  rm -rf "${pkg}/bin"
+  rm -rf "${pkg:?}/bin"
   mkdir -p "${pkg}/bin"
   cp "${tmp}/anymon-${target}/${exe}" "${pkg}/bin/${exe}"
   chmod 755 "${pkg}/bin/${exe}"
