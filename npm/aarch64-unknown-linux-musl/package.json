@@ -1,7 +1,7 @@
 {
-  "name": "@anymon/x86_64-unknown-linux-gnu",
+  "name": "@anymon/aarch64-unknown-linux-musl",
   "version": "1.0.0",
-  "description": "The anymon binary for x86_64-unknown-linux-gnu.",
+  "description": "The anymon binary for aarch64-unknown-linux-musl.",
   "homepage": "https://anymon.xyz",
   "repository": {
     "type": "git",
@@ -15,10 +15,10 @@
     "linux"
   ],
   "cpu": [
-    "x64"
+    "arm64"
   ],
   "libc": [
-    "glibc"
+    "musl"
   ],
   "preferUnplugged": true
 }

@@ -1,8 +1,13 @@
 {
   "name": "@anymon/x86_64-apple-darwin",
-  "version": "0.7.2",
-  "description": "anymon binary for x86_64-apple-darwin",
+  "version": "1.0.0",
+  "description": "The anymon binary for x86_64-apple-darwin.",
   "homepage": "https://anymon.xyz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/builtbyjonas/anymon.git"
+  },
+  "license": "MIT OR Apache-2.0",
   "files": [
     "bin"
   ],
@@ -12,5 +17,5 @@
   "cpu": [
     "x64"
   ],
-  "license": "MIT or Apache-2.0"
+  "preferUnplugged": true
 }

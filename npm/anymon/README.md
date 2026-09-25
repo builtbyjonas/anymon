@@ -1,55 +1,46 @@
-# Anymon
+# anymon
 
-Anymon is an ultra‑fast, language‑agnostic file watcher that runs arbitrary
-commands when files change. It is intended to be a lightweight developer
-productivity tool for running builds, tests, linters, or any script in response
-to filesystem events.
+An ultra-fast, language-agnostic file watcher that runs anything on change,
+like `nodemon` but for every language, with reliable restarts of the whole
+process tree.
 
-## Installation
+This package installs the native anymon binary for your platform (Linux
+glibc or musl, macOS, Windows; x64 and arm64).
 
-- Install globally:
+## Install
 
-```bash
-npm i -g anymon
-# or
-yarn global add anymon
-# or
-pnpm add -g anymon
-# or
-bun add -g anymon
+```sh
+npm i -D anymon     # per project
+npm i -g anymon     # globally (or pnpm add -g / yarn global add / bun add -g)
 ```
 
-- Or add per-project as a dev dependency:
+## Use
 
-```bash
-npm i -D anymon
-# or
-yarn add -D anymon
-# or
-pnpm add -D anymon
-# or
-bun add -D anymon
+```sh
+npx anymon -e ts,tsx -- node --import tsx src/server.ts
+npx anymon init     # create an Anymon.toml
+npx anymon          # run the tasks in Anymon.toml
 ```
 
-## Updating
+In `package.json`:
 
-To update Anymon to the latest version:
-
-```bash
-npm i -g anymon@latest
-# or
-yarn global add anymon@latest
-# or
-pnpm add -g anymon@latest
-# or
-bun add -g anymon@latest
+```json
+{
+  "scripts": {
+    "dev": "anymon -w src -- node src/index.js"
+  }
+}
 ```
 
-## Configuration
+While anymon runs, type `rs` + Enter to restart, `s` for status and `q` to
+quit.
 
-Configuration is a TOML file (e.g., `Anymon.toml`). The supported schema is
-documented in `docs/usage.md` and implemented in `crates/anymon-core/src/config.rs`.
+## Documentation
+
+Everything else, including configuration, patterns and the command-line
+options, is documented at
+[github.com/builtbyjonas/anymon](https://github.com/builtbyjonas/anymon#readme).
 
 ## License
 
-This repository is dual-licensed under the MIT License and the Apache License (Version 2.0).
+MIT or Apache-2.0, at your option.

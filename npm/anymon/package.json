@@ -1,7 +1,33 @@
 {
   "name": "anymon",
-  "version": "0.7.2",
+  "version": "1.0.0",
   "description": "Ultra-fast, language-agnostic file watcher that runs anything on change.",
+  "homepage": "https://anymon.xyz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/builtbyjonas/anymon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/builtbyjonas/anymon/issues"
+  },
+  "license": "MIT OR Apache-2.0",
+  "author": "ByJonas <me@binaryblazer.me>",
+  "contributors": [
+    "Anymon Contributors"
+  ],
+  "keywords": [
+    "file-watcher",
+    "watcher",
+    "watch",
+    "file-change",
+    "hot-reload",
+    "auto-reload",
+    "nodemon",
+    "file-monitor",
+    "fs-watch",
+    "automation",
+    "cli"
+  ],
   "bin": {
     "anymon": "bin/anymon.js"
   },
@@ -9,29 +35,17 @@
     "bin/anymon.js",
     "README.md"
   ],
-  "homepage": "https://anymon.xyz",
-  "keywords": [
-    "file-watcher",
-    "watcher",
-    "file-change",
-    "hot-reload",
-    "auto-reload",
-    "file-monitor",
-    "fs-watch",
-    "file-system",
-    "automation"
-  ],
-  "authors": [
-    "ByJonas <me@binaryblazer.me>",
-    "Anymon Contributors"
-  ],
-  "optionalDependencies": {
-    "@anymon/x86_64-unknown-linux-gnu": "0.7.2",
-    "@anymon/aarch64-unknown-linux-gnu": "0.7.2",
-    "@anymon/x86_64-apple-darwin": "0.7.2",
-    "@anymon/aarch64-apple-darwin": "0.7.2",
-    "@anymon/x86_64-pc-windows-msvc": "0.7.2",
-    "@anymon/aarch64-pc-windows-msvc": "0.7.2"
+  "engines": {
+    "node": ">=16"
   },
-  "license": "MIT or Apache-2.0"
+  "optionalDependencies": {
+    "@anymon/aarch64-apple-darwin": "1.0.0",
+    "@anymon/aarch64-pc-windows-msvc": "1.0.0",
+    "@anymon/aarch64-unknown-linux-gnu": "1.0.0",
+    "@anymon/aarch64-unknown-linux-musl": "1.0.0",
+    "@anymon/x86_64-apple-darwin": "1.0.0",
+    "@anymon/x86_64-pc-windows-msvc": "1.0.0",
+    "@anymon/x86_64-unknown-linux-gnu": "1.0.0",
+    "@anymon/x86_64-unknown-linux-musl": "1.0.0"
+  }
 }
