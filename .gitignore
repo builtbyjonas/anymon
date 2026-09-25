@@ -3,5 +3,6 @@ dist/
 build/
 bin/anymon*
 node_modules/
+.rune/
 npm/*/bin/anymon
 npm/*/bin/anymon.exe
