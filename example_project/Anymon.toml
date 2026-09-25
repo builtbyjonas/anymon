@@ -1,9 +1,17 @@
-[[task]]
-name = "example"
-watch = ["src/**/*.rs"]
-run = "echo 'Hello world from Anymon!'"
-restart = true
+# Try it: run `anymon` in this directory (or `cargo run --manifest-path
+# ../Cargo.toml` while developing anymon), then edit src/main.rs.
 
 [global]
 debounce = 50
-ignore = ["**/target/**"]
+
+[[task]]
+name = "run"
+watch = ["src/**/*.rs", "Cargo.toml"]
+run = "cargo run --quiet"
+
+[[task]]
+name = "test"
+watch = "src/**/*.rs"
+run = "cargo test --quiet"
+restart = false        # let a test run finish, then run again
+run_on_start = false   # wait for the first change

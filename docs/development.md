@@ -1,76 +1,116 @@
 # Development
 
-This document explains how to build, test, and contribute to the Anymon
-project.
+## Setup
 
-## Building
+You need Rust 1.88 or newer. The workspace pins no toolchain; the latest
+stable release is what CI uses.
 
-### Build the workspace
-
-```bash
+```sh
+git clone https://github.com/builtbyjonas/anymon
+cd anymon
 cargo build
+cargo run -- --help
 ```
 
-### Or build in release mode
+## Layout
 
-```bash
-cargo build --release
+```text
+crates/
+  anymon-core/     the `anymon` binary (CLI, init, check, update)
+  anymon-runner/   planning, watching, event filtering, task supervision
+  anymon-config/   Anymon.toml schema, validation and discovery
+  anymon-shell/    command parsing, process groups/job objects, `anymon-shell` binary
+docs/              user documentation
+example_project/   a tiny project to try anymon on
+installers/        install.sh and install.ps1 (served at anymon.xyz)
+npm/               the npm launcher package and one package per platform
+www/               the anymon.xyz server (redirects and installer delivery)
+.github/           CI and release workflows and their scripts
 ```
 
-## Running tests
+[overview.md](overview.md) describes how the pieces fit together.
 
-### Run the workspace tests
+## Checks
 
-```bash
+Run these before opening a pull request. CI runs the same checks on Linux,
+macOS and Windows.
+
+```sh
+cargo fmt --all
+cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-## Formatting and linting
+The tests include:
 
-Format the code with `rustfmt` (provided by `rustup component add rustfmt`):
+- unit tests next to the code (parsing, patterns, ignore rules, planning,
+  version handling, ...),
+- process tests in `crates/anymon-shell/tests`, which check graceful
+  termination, escalation to `SIGKILL` and that no grandchild process survives,
+- end-to-end tests in `crates/anymon-core/tests/cli.rs`, which run the real
+  binary: they change files and check the restarts, ignore rules, config
+  reloads, queueing, polling, signals and exit codes.
 
-```bash
-cargo fmt --all
-```
+## Trying changes
 
-## Run clippy for lint checks:
-
-```bash
-rustup component add clippy
-cargo clippy --all -- -D warnings
-```
-
-## Debugging and logging
-
-Use `cargo run` with the `debug` command to print loaded configuration and
-additional runtime info:
-
-```bash
-cd crates/anymon-core
-cargo run -- debug --config ../example_project/Anymon.toml
-```
-
-## Docs generation
-
-Generate API docs and open them in the browser:
-
-```bash
-cargo doc --workspace --open
-```
-
-## Testing changes locally
-
-Use `example_project` to verify typical workflows quickly:
-
-```bash
+```sh
 cd example_project
-cargo run -- --config Anymon.toml watch
+cargo run --manifest-path ../Cargo.toml -- -v
 ```
 
-## Submitting changes
+Edit `example_project/src/main.rs` and watch the task restart. `-v` shows
+every file event and the watched directories. `anymon check` prints the
+resolved configuration.
 
-1. Fork and clone the repository.
-2. Create a feature branch: `git checkout -b feat/my-change`.
-3. Implement changes and add tests where appropriate.
-4. Run formatting and tests.
-5. Open a pull request with a clear description and reproduction steps.
+## Release builds
+
+The release binaries are built by `.github/scripts/build.sh`:
+
+- macOS and Windows targets are built with plain `cargo build`.
+- Linux targets are cross-compiled with
+  [cargo-zigbuild](https://github.com/rust-cross/cargo-zigbuild) and
+  [Zig](https://ziglang.org) 0.15. The musl builds are fully static, and the
+  glibc builds link against glibc 2.17 so they run on old distributions.
+
+To reproduce a Linux build locally (from any OS):
+
+```sh
+cargo install cargo-zigbuild      # and install Zig 0.15, e.g. from ziglang.org
+rustup target add x86_64-unknown-linux-musl
+.github/scripts/build.sh x86_64-unknown-linux-musl
+.github/scripts/package.sh x86_64-unknown-linux-musl dist
+```
+
+`package.sh` creates `dist/anymon-<target>.tar.gz` (`.zip` on Windows) and
+a `.sha256` file next to it.
+
+## Releasing
+
+1. Update `version` in the `[workspace.package]` table of the root
+   `Cargo.toml`, and in `example_project/Cargo.toml`.
+2. Run `node .github/scripts/update-npm-versions.js` to sync the npm packages.
+3. Add the release notes to `CHANGELOG.md`.
+4. Commit, then create a GitHub release with the tag `v<version>` (for example
+   `v1.0.0`). Mark it as a pre-release for versions such as `1.1.0-rc.1`.
+
+Creating the release starts the [release workflow](../.github/workflows/release.yml), which:
+
+1. checks that the tag matches the version in `Cargo.toml`,
+2. builds and smoke-tests all eight targets,
+3. uploads the archives, the `.sha256` files and a combined `SHA256SUMS`
+   to the release,
+4. publishes the npm packages: the platform packages first, then
+   `anymon`. Pre-releases go to the `next` tag, releases to `latest`.
+   Versions that already exist are skipped, so a failed run can be re-run, or
+   started manually for an existing tag ("Run workflow").
+
+Publishing needs an `NPM_TOKEN` secret that can publish the `anymon` package
+and the `@anymon/*` scope. The npm job runs in the `stable` environment for
+releases and `next` for pre-releases.
+
+## Website
+
+`www/` is a small Express app deployed on Vercel. It redirects
+`anymon.xyz` to the repository and serves `install.sh` and `install.ps1`
+from the `main` branch. That makes installer changes live as soon as
+they are merged.

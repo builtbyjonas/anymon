@@ -1,35 +1,21 @@
 # anymon-core
 
-The Rust core for the Anymon project — an ultra-fast, language-agnostic file
-watcher that runs arbitrary commands when files change. This crate provides the
-command-line interface, configuration parsing, file-watching logic and task
-management used by the `anymon` binary.
+The `anymon` command-line tool: an ultra-fast, language-agnostic file watcher
+that runs anything on change.
 
-## Features
-
-- TOML-based configuration (`Anymon.toml`) with per-task watch patterns.
-- Cross-platform spawning: uses native process spawning and falls back to
-	`sh -c` / PowerShell when needed.
-- Debounce window and ignore patterns.
-- Control commands over stdin: `rs`/`restart`, `status`, `quit`.
-
-## Crate layout
-
-- `src/config.rs` — configuration structures and TOML parsing helpers.
-- `src/main.rs` — CLI and main runtime (watch loop, task loops, process
-	management).
-
-## Usage (crate)
-
-Build and run from the crate directory:
-
-```
-cd crates/anymon-core
-cargo run --release -- --help
+```sh
+cargo install --git https://github.com/builtbyjonas/anymon anymon-core
+anymon -e rs -- cargo test
 ```
 
-When running the binary you will typically either run a single command with
-`anymon run "cargo test"` or start the watcher with `anymon watch --config Anymon.toml`.
+This crate contains the command-line interface, `anymon init`,
+`anymon check` and the self-updater. The watching and process handling live
+in [`anymon-runner`](../anymon-runner) and [`anymon-shell`](../anymon-shell),
+the config format in [`anymon-config`](../anymon-config).
 
-For full project-level documentation and examples, see the repository's root
-README and the `docs/` directory.
+See the [main README](../../README.md) and the [documentation](../../docs)
+for usage.
+
+## License
+
+MIT or Apache-2.0, at your option.
