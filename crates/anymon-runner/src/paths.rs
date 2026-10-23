@@ -44,7 +44,18 @@ pub fn resolve(path: &Path, base: &Path) -> PathBuf {
 pub fn display_relative(path: &Path, root: &Path) -> String {
     match path.strip_prefix(root) {
         Ok(rel) if rel.as_os_str().is_empty() => ".".to_string(),
-        Ok(rel) => rel.display().to_string(),
+        Ok(rel) => {
+            // Ensure consistent forward-slash separators across platforms
+            let display = rel.display().to_string();
+            #[cfg(windows)]
+            {
+                display.replace('\\', "/")
+            }
+            #[cfg(not(windows))]
+            {
+                display
+            }
+        }
         Err(_) => path.display().to_string(),
     }
 }
