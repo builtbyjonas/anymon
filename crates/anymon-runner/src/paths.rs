@@ -90,11 +90,11 @@ mod tests {
         assert_eq!(display_relative(Path::new("/project"), root), ".");
         assert_eq!(
             display_relative(Path::new("/project/src/main.rs"), root),
-            Path::new("src").join("main.rs").display().to_string()
+            "src/main.rs"
         );
         assert_eq!(
             display_relative(Path::new("/elsewhere/x"), root),
-            "/elsewhere/x"
+            Path::new("/elsewhere/x").display().to_string()
         );
     }
 }
