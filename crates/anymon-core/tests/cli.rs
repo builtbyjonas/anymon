@@ -405,10 +405,7 @@ run = "{}"
 
     let (code, output) = watcher.quit();
     assert_eq!(code, 0, "{output}");
-    assert!(
-        output.contains("src/main.txt changed"),
-        "{output}"
-    );
+    assert!(output.contains("src/main.txt changed"), "{output}");
 }
 
 #[test]
