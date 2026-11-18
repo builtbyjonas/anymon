@@ -75,7 +75,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "anymon-config"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -85,7 +85,7 @@ dependencies = [
 
 [[package]]
 name = "anymon-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "anymon-config",
@@ -106,7 +106,7 @@ dependencies = [
 
 [[package]]
 name = "anymon-runner"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "anymon-config",
@@ -122,7 +122,7 @@ dependencies = [
 
 [[package]]
 name = "anymon-shell"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "libc",
  "tempfile",
