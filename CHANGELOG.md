@@ -4,6 +4,37 @@ All notable changes to anymon are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and anymon
 follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-18
+
+### What's Changed
+* deps: bump flate2 from 1.1.5 to 1.1.10 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/45
+* deps: bump libc from 0.2.185 to 0.2.189 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/44
+* deps: bump libc from 0.2.189 to 0.2.190 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/47
+* deps: bump tokio from 1.53.1 to 1.53.2 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/48
+* ci: bump dtolnay/rust-toolchain from 1.88 to 1.120 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/46
+* deps: bump zip from 8.6.0 to 9.0.5 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/52
+* deps: bump libc from 0.2.190 to 0.2.191 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/55
+* deps: bump sha2 from 0.11.0 to 0.11.1 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/53
+* deps: bump serde_json from 1.0.151 to 1.0.154 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/50
+* deps: bump toml from 1.1.6+spec-1.1.0 to 1.1.8+spec-1.1.0 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/49
+* deps: bump tokio from 1.53.2 to 1.53.3 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/54
+* deps: bump zip from 9.0.5 to 9.2.0 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/62
+* deps: bump globset from 0.4.20 to 0.4.21 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/61
+* deps: bump ignore from 0.4.33 to 0.4.34 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/60
+* deps: bump ureq from 3.4.2 to 3.5.0 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/56
+* deps: bump notify from 8.2.0 to 8.2.1 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/59
+* deps: bump notify from 8.2.1 to 8.2.2 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/67
+* deps: bump ureq from 3.5.0 to 3.5.2 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/68
+* deps: bump flate2 from 1.1.10 to 1.1.11 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/65
+* deps: bump zip from 9.3.0 to 9.4.1 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/66
+* deps: bump toml from 1.1.8+spec-1.1.0 to 1.2.1+spec-1.1.0 by @dependabot[bot] in https://github.com/builtbyjonas/anymon/pull/64
+* final v1.1.0 by @builtbyjonas in https://github.com/builtbyjonas/anymon/pull/69
+
+### New Contributors
+* @builtbyjonas made their first contribution in https://github.com/builtbyjonas/anymon/pull/69
+
+**Full Changelog**: https://github.com/builtbyjonas/anymon/compare/v1.0.0...v1.1.0
+
 ## [1.0.0] - 2026-09-25
 
 The first stable release. The watcher, process handling, command line,
