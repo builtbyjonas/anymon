@@ -3,7 +3,7 @@
 #   irm https://anymon.xyz/install.ps1 | iex
 #
 # Environment variables:
-#   ANYMON_VERSION         version to install, e.g. 1.0.0 (default: latest)
+#   ANYMON_VERSION         version to install, e.g. 1.1.0 (default: latest)
 #   ANYMON_INSTALL_DIR     install directory (default: %LOCALAPPDATA%\anymon)
 #   ANYMON_NO_MODIFY_PATH  set to 1 to not add the install directory to PATH
 #

@@ -4,7 +4,7 @@
 #   curl -fsSL https://anymon.xyz/install.sh | sh
 #
 # Environment variables:
-#   ANYMON_VERSION         version to install, e.g. 1.0.0 (default: latest)
+#   ANYMON_VERSION         version to install, e.g. 1.1.0 (default: latest)
 #   ANYMON_INSTALL_DIR     install directory
 #                          (default: ~/.local/share/anymon on Linux,
 #                           ~/Library/Application Support/anymon on macOS)

@@ -42,13 +42,13 @@ Environment variables customize the installation:
 
 | Variable | Effect |
 | -------- | ------ |
-| `ANYMON_VERSION` | Install a specific version, e.g. `1.0.0`. |
+| `ANYMON_VERSION` | Install a specific version, e.g. `1.1.0`. |
 | `ANYMON_INSTALL_DIR` | Install into this directory. |
 | `ANYMON_LIBC` | Linux only: `musl` (default) or `gnu`. |
 | `ANYMON_NO_MODIFY_PATH` | Set to `1` to leave your shell profile and `PATH` unchanged. |
 
 ```sh
-curl -fsSL https://anymon.xyz/install.sh | ANYMON_VERSION=1.0.0 ANYMON_INSTALL_DIR=/usr/local/bin sh
+curl -fsSL https://anymon.xyz/install.sh | ANYMON_VERSION=1.1.0 ANYMON_INSTALL_DIR=/usr/local/bin sh
 ```
 
 ## npm
