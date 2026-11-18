@@ -18,9 +18,9 @@ homepage = "https://anymon.xyz"
 rust-version = "1.88"
 
 [workspace.dependencies]
-anymon-config = { path = "crates/anymon-config", version = "1.0.0" }
-anymon-runner = { path = "crates/anymon-runner", version = "1.0.0" }
-anymon-shell = { path = "crates/anymon-shell", version = "1.0.0" }
+anymon-config = { path = "crates/anymon-config", version = "1.1.0" }
+anymon-runner = { path = "crates/anymon-runner", version = "1.1.0" }
+anymon-shell = { path = "crates/anymon-shell", version = "1.1.0" }
 
 anyhow = "1"
 clap = { version = "4", features = ["derive", "wrap_help"] }
