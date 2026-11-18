@@ -1,6 +1,6 @@
 {
   "name": "@anymon/aarch64-pc-windows-msvc",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The anymon binary for aarch64-pc-windows-msvc.",
   "homepage": "https://anymon.xyz",
   "repository": {
